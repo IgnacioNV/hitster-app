@@ -1,41 +1,36 @@
-import { Song } from './store';
-
-interface iTunesResult {
-  trackId: number;
-  trackName: string;
-  artistName: string;
-  collectionName: string;
-  artworkUrl100: string;
-  previewUrl: string;
-  releaseDate: string;
-}
-
-export async function enrichSongWithItunes(song: Song): Promise<Song> {
+export async function enrichSongWithItunes(
+  artist: string,
+  title: string
+) {
   try {
-    const query = encodeURIComponent(`${song.artist} ${song.title}`);
-    const res = await fetch(
-      `https://itunes.apple.com/search?term=${query}&media=music&limit=5&entity=song`
-    );
-    if (!res.ok) return song;
-    const data = await res.json();
-    
-    if (!data.results || data.results.length === 0) return song;
+    const query = encodeURIComponent(`${artist} ${title}`);
 
-    // Find best match
-    const match: iTunesResult = data.results.find((r: iTunesResult) => {
-      const titleMatch = r.trackName.toLowerCase().includes(song.title.toLowerCase()) ||
-        song.title.toLowerCase().includes(r.trackName.toLowerCase());
-      const artistMatch = r.artistName.toLowerCase().includes(song.artist.toLowerCase()) ||
-        song.artist.toLowerCase().includes(r.artistName.toLowerCase());
-      return titleMatch && artistMatch;
-    }) || data.results[0];
+    const response = await fetch(
+      `https://itunes.apple.com/search?term=${query}&entity=song&limit=10`
+    );
+
+    const data = await response.json();
+
+    if (!data.results || data.results.length === 0) {
+      return null;
+    }
+
+    const match = data.results.find(
+      (song: any) => song.previewUrl
+    );
+
+    if (!match) {
+      return null;
+    }
 
     return {
-      ...song,
-      previewUrl: match.previewUrl || song.previewUrl,
-      albumArt: match.artworkUrl100?.replace('100x100', '300x300') || song.albumArt,
+      previewUrl: match.previewUrl,
+      artwork: match.artworkUrl100 || null,
+      artistName: match.artistName || artist,
+      trackName: match.trackName || title,
     };
-  } catch {
-    return song;
+  } catch (error) {
+    console.error('iTunes fetch error:', error);
+    return null;
   }
 }

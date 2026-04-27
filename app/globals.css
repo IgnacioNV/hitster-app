@@ -1,78 +1,100 @@
 @import url('https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,300..900;1,300..900&display=swap');
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
-  --bg: #0d1117;
-  --bg-card: #161b27;
-  --bg-elevated: #1e2535;
-  --rosa: #e8197d;
-  --naranja: #f47c3c;
-  --amarillo: #f5c842;
-  --celeste: #3db8f5;
-  --text-primary: #ffffff;
-  --text-secondary: #8892a4;
-  --border: #2a3347;
-  --purple-card: #2d1e3e;
-  --brown-card: #2e1f1a;
+--bg: #0d1117;
+--bg-card: #161b27;
+--bg-elevated: #1e2535;
+--rosa: #e8197d;
+--naranja: #f47c3c;
+--amarillo: #f5c842;
+--celeste: #3db8f5;
+--text-primary: #ffffff;
+--text-secondary: #8892a4;
+--border: #2a3347;
+--purple-card: #2d1e3e;
+--brown-card: #2e1f1a;
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+  }
 
 html, body {
-  background: var(--bg);
-  color: var(--text-primary);
-  font-family: 'Figtree', sans-serif;
-  overflow-x: hidden;
-  min-height: 100dvh;
-  margin: 0;
+background: var(--bg);
+color: var(--text-primary);
+font-family: 'Figtree';
+overflow-x: hidden;
+min-height: 100dvh;
+margin: 0;
 }
 
 .wave-bar {
-  border-radius: 4px;
-  animation: wave 1.2s ease-in-out infinite;
+border-radius: 4px;
+animation: wave 1.2s ease-in-out infinite;
 }
+
 @keyframes wave {
-  0%, 100% { transform: scaleY(0.35); opacity: 0.45; }
-  50% { transform: scaleY(1); opacity: 1; }
+0%, 100% {
+transform: scaleY(0.35);
+opacity: 0.45;
+}
+50% {
+transform: scaleY(1);
+opacity: 1;
+}
 }
 
 .btn-primary {
-  background: var(--rosa);
-  color: white;
-  font-family: 'Figtree', sans-serif;
-  font-weight: 700;
-  font-size: 0.875rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border-radius: 9999px;
-  padding: 1rem 2rem;
-  width: 100%;
-  border: none;
-  cursor: pointer;
-  transition: opacity 0.15s;
+background: var(--rosa);
+color: white;
+font-family: 'Figtree', sans-serif;
+font-weight: 700;
+font-size: 0.875rem;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+border-radius: 9999px;
+padding: 1rem 2rem;
+width: 100%;
+border: none;
+cursor: pointer;
+transition: opacity 0.15s;
 }
-.btn-primary:active { opacity: 0.8; }
+
+.btn-primary:active {
+opacity: 0.8;
+}
 
 .btn-secondary {
-  background: transparent;
-  color: white;
-  font-family: 'Figtree', sans-serif;
-  font-weight: 700;
-  font-size: 0.875rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  border-radius: 9999px;
-  padding: 1rem 2rem;
-  width: 100%;
-  border: 2px solid #3a4560;
-  cursor: pointer;
-  transition: border-color 0.15s;
+background: transparent;
+color: white;
+font-family: 'Figtree', sans-serif;
+font-weight: 700;
+font-size: 0.875rem;
+letter-spacing: 0.08em;
+text-transform: uppercase;
+border-radius: 9999px;
+padding: 1rem 2rem;
+width: 100%;
+border: 2px solid #3a4560;
+cursor: pointer;
+transition: border-color 0.15s;
 }
-.btn-secondary:active { border-color: #6a7590; }
 
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.btn-secondary:active {
+border-color: #6a7590;
+}
+
+::-webkit-scrollbar {
+width: 3px;
+}
+
+::-webkit-scrollbar-track {
+background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+background: var(--border);
+border-radius: 2px;
+}

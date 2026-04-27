@@ -1,19 +1,28 @@
 'use client';
+
 import { motion } from 'framer-motion';
 import { useGameStore, TeamColor } from '@/lib/store';
+import { useMusicPlayer } from '@/hooks/useMusicPlayer';
 import TeamScores from './TeamScores';
 import Waveform from './Waveform';
 import Timeline from './Timeline';
 
 const COLOR_HEX: Record<TeamColor, string> = {
-  rosa: '#e8197d', naranja: '#f47c3c', amarillo: '#f5c842', celeste: '#3db8f5',
+  rosa: '#e8197d',
+  naranja: '#f47c3c',
+  amarillo: '#f5c842',
+  celeste: '#3db8f5',
 };
 
 export default function OpponentChangeScreen() {
   const {
-    teams, currentTeamIndex, currentSong, timeLeft,
+    teams,
+    currentTeamIndex,
+    currentSong,
+    timeLeft,
     currentPlacementIndex,
-    opponentPlacementIndex, setOpponentPlacement,
+    opponentPlacementIndex,
+    setOpponentPlacement,
     confirmOpponentChange,
   } = useGameStore();
 
@@ -22,13 +31,27 @@ export default function OpponentChangeScreen() {
   const opponentTeam = teams[opponentIndex];
   const bg = COLOR_HEX[opponentTeam.color];
 
-  const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-  const secs = (timeLeft % 60).toString().padStart(2, '0');
+  const mins = Math.floor(timeLeft / 60)
+    .toString()
+    .padStart(2, '0');
+
+  const secs = (timeLeft % 60)
+    .toString()
+    .padStart(2, '0');
 
   if (!currentSong) return null;
 
+  const {
+    play,
+    pause,
+    isPlaying,
+    isLoading,
+ } = useMusicPlayer(currentSong?.previewUrl ?? undefined);
+
   const handleSelect = (index: number) => {
-    if (index === currentPlacementIndex) return; // blocked
+    // No puede elegir la misma posición que eligió el rival
+    if (index === currentPlacementIndex) return;
+
     setOpponentPlacement(index);
   };
 
@@ -48,30 +71,119 @@ export default function OpponentChangeScreen() {
       }}
     >
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: 16,
+        }}
+      >
         <div>
-          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6 }}>
+          <p
+            style={{
+              fontFamily: 'Figtree',
+              fontWeight: 700,
+              fontSize: '0.7rem',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: '#8892a4',
+              marginBottom: 6,
+            }}
+          >
             TURNO (robo):
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ background: bg, borderRadius: 6, padding: '4px 10px' }}>
-              <span style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: opponentTeam.color === 'amarillo' ? '#1a1a1a' : 'white' }}>
+
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+            }}
+          >
+            <div
+              style={{
+                background: bg,
+                borderRadius: 6,
+                padding: '4px 10px',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'Figtree',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  color:
+                    opponentTeam.color === 'amarillo'
+                      ? '#1a1a1a'
+                      : 'white',
+                }}
+              >
                 {opponentTeam.name}
               </span>
             </div>
-            <div style={{ background: bg, borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '0.85rem', color: opponentTeam.color === 'amarillo' ? '#1a1a1a' : 'white' }}>
+
+            <div
+              style={{
+                background: bg,
+                borderRadius: '50%',
+                width: 28,
+                height: 28,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <span
+                style={{
+                  fontFamily: 'Figtree',
+                  fontWeight: 800,
+                  fontSize: '0.85rem',
+                  color:
+                    opponentTeam.color === 'amarillo'
+                      ? '#1a1a1a'
+                      : 'white',
+                }}
+              >
                 {opponentTeam.robberyTokens}
               </span>
             </div>
-            <span style={{ fontFamily: 'Figtree', fontSize: '0.75rem', color: '#8892a4' }}>Fichas de robo</span>
+
+            <span
+              style={{
+                fontFamily: 'Figtree',
+                fontSize: '0.75rem',
+                color: '#8892a4',
+              }}
+            >
+              Fichas de robo
+            </span>
           </div>
         </div>
+
         <div style={{ textAlign: 'right' }}>
-          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6 }}>
+          <p
+            style={{
+              fontFamily: 'Figtree',
+              fontWeight: 700,
+              fontSize: '0.7rem',
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              color: '#8892a4',
+              marginBottom: 6,
+            }}
+          >
             TIEMPO RESTANTE
           </p>
-          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.4rem', color: 'white' }}>
+
+          <span
+            style={{
+              fontFamily: 'Figtree',
+              fontWeight: 800,
+              fontSize: '1.4rem',
+              color: 'white',
+            }}
+          >
             {mins}:{secs}
           </span>
         </div>
@@ -80,29 +192,89 @@ export default function OpponentChangeScreen() {
       <TeamScores />
 
       {/* Audio */}
-      <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: 'white', marginBottom: 8 }}>
+      <p
+        style={{
+          fontFamily: 'Figtree',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          color: 'white',
+          marginBottom: 8,
+        }}
+      >
         Sonando ahora...
       </p>
-      <div style={{
-        background: '#1a2035',
-        border: `1.5px solid ${bg}40`,
-        borderRadius: 14,
-        padding: '24px 20px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        marginBottom: 20,
-        minHeight: 140,
-      }}>
+
+      <div
+        style={{
+          background: '#1a2035',
+          border: `1.5px solid ${bg}40`,
+          borderRadius: 14,
+          padding: '24px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 20,
+          minHeight: 180,
+        }}
+      >
         <Waveform color={bg} />
+
+        <div
+          style={{
+            marginTop: 20,
+            width: '100%',
+          }}
+        >
+          {currentSong?.previewUrl ? (
+            <button
+              onClick={isPlaying ? pause : play}
+              className="btn-primary"
+              style={{
+                width: '100%',
+              }}
+            >
+              {isLoading
+                ? 'CARGANDO...'
+                : isPlaying
+                ? 'PAUSAR'
+                : '▶ REPRODUCIR CANCIÓN'}
+            </button>
+          ) : (
+            <div
+              style={{
+                textAlign: 'center',
+                fontFamily: 'Figtree',
+                fontSize: '0.85rem',
+                color: '#8892a4',
+              }}
+            >
+              Vista previa no disponible para esta canción
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Timeline */}
-      <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: 'white', marginBottom: 8 }}>
+      <p
+        style={{
+          fontFamily: 'Figtree',
+          fontWeight: 700,
+          fontSize: '0.85rem',
+          color: 'white',
+          marginBottom: 8,
+        }}
+      >
         Línea de tiempo
       </p>
 
-      <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16 }}>
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          marginBottom: 16,
+        }}
+      >
         <Timeline
           timeline={currentTeam.timeline}
           color={currentTeam.color}
@@ -120,7 +292,9 @@ export default function OpponentChangeScreen() {
           if (opponentPlacementIndex === null) return;
           confirmOpponentChange();
         }}
-        style={{ opacity: opponentPlacementIndex === null ? 0.5 : 1 }}
+        style={{
+          opacity: opponentPlacementIndex === null ? 0.5 : 1,
+        }}
       >
         CONFIRMAR
       </motion.button>
