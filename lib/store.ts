@@ -53,6 +53,7 @@ interface GameState {
 
   revealResult: RevealResult;
   opponentChoseChange: boolean;
+  robberyMessage: string | null;
 
   setTeams: (teams: [Team, Team]) => void;
   setPhase: (phase: GamePhase) => void;
@@ -66,6 +67,7 @@ interface GameState {
   opponentConfirm: () => void;
   opponentChange: () => void;
   confirmOpponentChange: () => void;
+  timeoutAutoReveal: () => void;
 
   nextTurn: () => Promise<void>;
   resetGame: () => void;
@@ -88,9 +90,6 @@ const initialTeams: [Team, Team] = [
   },
 ];
 
-/**
- * Verifica si la canción está correctamente ubicada
- */
 function isCorrectPlacement(
   timeline: Song[],
   song: Song,
@@ -108,23 +107,15 @@ function isCorrectPlacement(
   return true;
 }
 
-/**
- * Inserta SIEMPRE y luego reordena por año
- * Esto evita bugs tipo:
- * 1995 antes que 1990
- */
 function insertSongSorted(
   timeline: Song[],
   song: Song,
   index: number
 ) {
   const updated = [...timeline];
-
   updated.splice(index, 0, song);
 
-  return updated.sort(
-    (a, b) => a.year - b.year
-  );
+  return updated.sort((a, b) => a.year - b.year);
 }
 
 export const useGameStore = create<GameState>((set, get) => ({
@@ -143,11 +134,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   revealResult: null,
   opponentChoseChange: false,
+  robberyMessage: null,
 
   setTeams: (teams) => set({ teams }),
 
-  setPhase: (phase) =>
-    set({ phase }),
+  setPhase: (phase) => set({ phase }),
 
   setCurrentPlacement: (index) =>
     set({
@@ -166,10 +157,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   decrementTime: () =>
     set((state) => ({
-      timeLeft: Math.max(
-        0,
-        state.timeLeft - 1
-      ),
+      timeLeft: Math.max(0, state.timeLeft - 1),
     })),
 
   setAllSongs: (songs) =>
@@ -183,9 +171,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 
-  /**
-   * El rival confirma que la posición original es correcta
-   */
   opponentConfirm: () => {
     const {
       teams,
@@ -194,26 +179,19 @@ export const useGameStore = create<GameState>((set, get) => ({
       currentPlacementIndex,
     } = get();
 
-    if (
-      !currentSong ||
-      currentPlacementIndex === null
-    ) {
+    if (!currentSong || currentPlacementIndex === null) {
       return;
     }
 
-    const currentTeam =
-      teams[currentTeamIndex];
+    const currentTeam = teams[currentTeamIndex];
 
-    const correct =
-      isCorrectPlacement(
-        currentTeam.timeline,
-        currentSong,
-        currentPlacementIndex
-      );
+    const correct = isCorrectPlacement(
+      currentTeam.timeline,
+      currentSong,
+      currentPlacementIndex
+    );
 
-    const updatedTeams = [
-      ...teams,
-    ] as [Team, Team];
+    const updatedTeams = [...teams] as [Team, Team];
 
     if (correct) {
       updatedTeams[currentTeamIndex] = {
@@ -223,30 +201,28 @@ export const useGameStore = create<GameState>((set, get) => ({
           currentSong,
           currentPlacementIndex
         ),
-        score:
-          currentTeam.score + 1,
+        score: currentTeam.score + 1,
       };
 
       set({
         teams: updatedTeams,
-        revealResult:
-          'team_correct',
+        revealResult: 'team_correct',
         phase: 'reveal',
         opponentChoseChange: false,
+        robberyMessage: null,
       });
-    } else {
-      set({
-        revealResult:
-          'both_wrong',
-        phase: 'reveal',
-        opponentChoseChange: false,
-      });
+
+      return;
     }
+
+    set({
+      revealResult: 'both_wrong',
+      phase: 'reveal',
+      opponentChoseChange: false,
+      robberyMessage: null,
+    });
   },
 
-  /**
-   * El rival decide usar robo
-   */
   opponentChange: () => {
     set({
       phase: 'opponent_change',
@@ -254,9 +230,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     });
   },
 
-  /**
-   * Confirmación del robo
-   */
   confirmOpponentChange: () => {
     const {
       teams,
@@ -274,135 +247,144 @@ export const useGameStore = create<GameState>((set, get) => ({
       return;
     }
 
-    const currentTeam =
-      teams[currentTeamIndex];
+    const currentTeam = teams[currentTeamIndex];
+    const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
+    const opponentTeam = teams[opponentIndex];
 
-    const opponentIndex =
-      currentTeamIndex === 0
-        ? 1
-        : 0;
+    const currentCorrect = isCorrectPlacement(
+      currentTeam.timeline,
+      currentSong,
+      currentPlacementIndex
+    );
 
-    const opponentTeam =
-      teams[opponentIndex];
+    const opponentCorrect = isCorrectPlacement(
+      currentTeam.timeline,
+      currentSong,
+      opponentPlacementIndex
+    );
 
-    const currentCorrect =
-      isCorrectPlacement(
-        currentTeam.timeline,
-        currentSong,
-        currentPlacementIndex
-      );
-
-    const opponentCorrect =
-      isCorrectPlacement(
-        currentTeam.timeline,
-        currentSong,
-        opponentPlacementIndex
-      );
-
-    const updatedTeams = [
-      ...teams,
-    ] as [Team, Team];
+    const updatedTeams = [...teams] as [Team, Team];
 
     /**
      * ROBO EXITOSO
      */
-    if (
-      !currentCorrect &&
-      opponentCorrect
-    ) {
-      updatedTeams[
-        opponentIndex
-      ] = {
+    if (!currentCorrect && opponentCorrect) {
+      updatedTeams[opponentIndex] = {
         ...opponentTeam,
-        timeline:
-          insertSongSorted(
-            opponentTeam.timeline,
-            currentSong,
-            opponentTeam.timeline.length
-          ),
-        score:
-          opponentTeam.score + 1,
-        robberyTokens:
-          Math.max(
-            0,
-            opponentTeam.robberyTokens - 1
-          ),
-      };
-
-      set({
-        teams: updatedTeams,
-        revealResult:
-          'opponent_correct',
-        phase: 'reveal',
-      });
-
-      return;
-    }
-
-    /**
-     * El equipo original estaba bien
-     */
-    if (currentCorrect) {
-      updatedTeams[
-        currentTeamIndex
-      ] = {
-        ...currentTeam,
-        timeline:
-          insertSongSorted(
-            currentTeam.timeline,
-            currentSong,
-            currentPlacementIndex
-          ),
-        score:
-          currentTeam.score + 1,
-      };
-
-      updatedTeams[
-        opponentIndex
-      ] = {
-        ...opponentTeam,
-        robberyTokens:
-          Math.max(
-            0,
-            opponentTeam.robberyTokens - 1
-          ),
-      };
-
-      set({
-        teams: updatedTeams,
-        revealResult:
-          'team_correct',
-        phase: 'reveal',
-      });
-
-      return;
-    }
-
-    /**
-     * Ambos mal
-     */
-    updatedTeams[
-      opponentIndex
-    ] = {
-      ...opponentTeam,
-      robberyTokens:
-        Math.max(
+        timeline: insertSongSorted(
+          opponentTeam.timeline,
+          currentSong,
+          opponentPlacementIndex
+        ),
+        score: opponentTeam.score + 1,
+        robberyTokens: Math.max(
           0,
           opponentTeam.robberyTokens - 1
         ),
+      };
+
+      set({
+        teams: updatedTeams,
+        revealResult: 'opponent_correct',
+        phase: 'reveal',
+        robberyMessage: `${opponentTeam.name} ha usado una ficha de robo. ${updatedTeams[opponentIndex].robberyTokens} fichas de robo restantes`,
+      });
+
+      return;
+    }
+
+    /**
+     * EL EQUIPO ORIGINAL ESTABA BIEN
+     */
+    if (currentCorrect) {
+      updatedTeams[currentTeamIndex] = {
+        ...currentTeam,
+        timeline: insertSongSorted(
+          currentTeam.timeline,
+          currentSong,
+          currentPlacementIndex
+        ),
+        score: currentTeam.score + 1,
+      };
+
+      updatedTeams[opponentIndex] = {
+        ...opponentTeam,
+        robberyTokens: Math.max(
+          0,
+          opponentTeam.robberyTokens - 1
+        ),
+      };
+
+      set({
+        teams: updatedTeams,
+        revealResult: 'team_correct',
+        phase: 'reveal',
+        robberyMessage: `${opponentTeam.name} ha perdido una ficha de robo. ${updatedTeams[opponentIndex].robberyTokens} fichas de robo restantes`,
+      });
+
+      return;
+    }
+
+    /**
+     * AMBOS INCORRECTOS
+     */
+    updatedTeams[opponentIndex] = {
+      ...opponentTeam,
+      robberyTokens: Math.max(
+        0,
+        opponentTeam.robberyTokens - 1
+      ),
     };
 
     set({
       teams: updatedTeams,
-      revealResult:
-        'both_wrong',
+      revealResult: 'both_wrong',
       phase: 'reveal',
+      robberyMessage: `${opponentTeam.name} ha perdido una ficha de robo. ${updatedTeams[opponentIndex].robberyTokens} fichas de robo restantes`,
     });
   },
 
-  /**
-   * Siguiente turno
-   */
+  timeoutAutoReveal: () => {
+    const {
+      teams,
+      currentTeamIndex,
+      currentSong,
+    } = get();
+
+    if (!currentSong) return;
+
+    const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
+    const opponentTeam = teams[opponentIndex];
+
+    const updatedTeams = [...teams] as [Team, Team];
+
+    const insertIndex = opponentTeam.timeline.findIndex(
+      (song) => currentSong.year < song.year
+    );
+
+    const finalIndex =
+      insertIndex === -1
+        ? opponentTeam.timeline.length
+        : insertIndex;
+
+    updatedTeams[opponentIndex] = {
+      ...opponentTeam,
+      timeline: insertSongSorted(
+        opponentTeam.timeline,
+        currentSong,
+        finalIndex
+      ),
+      score: opponentTeam.score + 1,
+    };
+
+    set({
+      teams: updatedTeams,
+      revealResult: 'opponent_correct',
+      phase: 'reveal',
+      robberyMessage: `Se terminó el tiempo. ${opponentTeam.name} recibe automáticamente la carta.`,
+    });
+  },
+
   nextTurn: async () => {
     const {
       allSongs,
@@ -410,72 +392,47 @@ export const useGameStore = create<GameState>((set, get) => ({
       currentTeamIndex,
     } = get();
 
-    const availableSongs =
-      allSongs.filter(
-        (song) =>
-          !usedSongIds.has(song.id)
-      );
+    const availableSongs = allSongs.filter(
+      (song) => !usedSongIds.has(song.id)
+    );
 
-    if (!availableSongs.length) {
-      return;
-    }
+    if (!availableSongs.length) return;
 
     const baseSong =
       availableSongs[
-        Math.floor(
-          Math.random() *
-            availableSongs.length
-        )
+        Math.floor(Math.random() * availableSongs.length)
       ];
 
-    const updatedUsed =
-      new Set(usedSongIds);
-
+    const updatedUsed = new Set(usedSongIds);
     updatedUsed.add(baseSong.id);
 
     let finalSong: Song = {
       ...baseSong,
     };
 
-    /**
-     * Enriquecimiento con iTunes
-     * (previewUrl)
-     */
-    const enriched =
-      await enrichSongWithItunes(
-        baseSong.artist,
-        baseSong.title
-      );
+    const enriched = await enrichSongWithItunes(
+      baseSong.artist,
+      baseSong.title
+    );
 
-    if (
-      enriched?.previewUrl
-    ) {
-      finalSong.previewUrl =
-        enriched.previewUrl;
+    if (enriched?.previewUrl) {
+      finalSong.previewUrl = enriched.previewUrl;
     }
 
     set({
       currentTeamIndex:
-        currentTeamIndex === 0
-          ? 1
-          : 0,
+        currentTeamIndex === 0 ? 1 : 0,
 
       currentSong: finalSong,
-
-      currentPlacementIndex:
-        null,
-
-      opponentPlacementIndex:
-        null,
+      currentPlacementIndex: null,
+      opponentPlacementIndex: null,
 
       phase: 'turn_active',
-
       timeLeft: 90,
 
       revealResult: null,
-
-      opponentChoseChange:
-        false,
+      opponentChoseChange: false,
+      robberyMessage: null,
 
       usedSongIds: updatedUsed,
     });
@@ -484,29 +441,20 @@ export const useGameStore = create<GameState>((set, get) => ({
   resetGame: () =>
     set({
       teams: initialTeams,
-
       currentTeamIndex: 0,
-
       phase: 'setup',
 
       currentSong: null,
-
-      currentPlacementIndex:
-        null,
-
-      opponentPlacementIndex:
-        null,
+      currentPlacementIndex: null,
+      opponentPlacementIndex: null,
 
       timeLeft: 90,
 
       allSongs: [],
-
-      usedSongIds:
-        new Set(),
+      usedSongIds: new Set(),
 
       revealResult: null,
-
-      opponentChoseChange:
-        false,
+      opponentChoseChange: false,
+      robberyMessage: null,
     }),
 }));
