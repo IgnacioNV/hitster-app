@@ -2,11 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  useGameStore,
-  TeamColor,
-  Team,
-} from '@/lib/store';
+import { useGameStore, TeamColor, Team } from '@/lib/store';
 import { songs } from '@/lib/songs';
 
 const COLORS: {
@@ -57,28 +53,91 @@ export default function SetupScreen() {
     useState<TeamColor>('celeste');
 
   const handleStartGame = async () => {
-    const configuredTeams = [
+    const shuffledSongs = [...songs].sort(
+      () => Math.random() - 0.5
+    );
+
+    const initialSongTeam1 =
+      shuffledSongs[0];
+
+    const initialSongTeam2 =
+      shuffledSongs[1];
+
+    const configuredTeams: [Team, Team] = [
       {
         name: team1Name || 'Equipo 1',
         color: team1Color,
-        timeline: [],
+        timeline: [initialSongTeam1],
         robberyTokens: 4,
-        score: 0,
+        score: 1,
       },
       {
         name: team2Name || 'Equipo 2',
         color: team2Color,
-        timeline: [],
+        timeline: [initialSongTeam2],
         robberyTokens: 4,
-        score: 0,
+        score: 1,
       },
-    ] as [Team, Team];
+    ];
 
     setTeams(configuredTeams);
     setAllSongs(songs);
     setPhase('turn_active');
 
     await nextTurn();
+  };
+
+  const renderColorPicker = (
+    selectedColor: TeamColor,
+    setColor: (color: TeamColor) => void
+  ) => {
+    return (
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns:
+            'repeat(2, 1fr)',
+          gap: 10,
+        }}
+      >
+        {COLORS.map((color) => {
+          const isSelected =
+            selectedColor === color.id;
+
+          return (
+            <button
+              key={color.id}
+              type="button"
+              onClick={() =>
+                setColor(color.id)
+              }
+              style={{
+                background: isSelected
+                  ? color.hex
+                  : '#161b27',
+                border: isSelected
+                  ? '2px solid white'
+                  : '1px solid #2a3347',
+                borderRadius: 14,
+                padding: '14px',
+                cursor: 'pointer',
+                fontFamily: 'Figtree',
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                color:
+                  color.id === 'amarillo' &&
+                  isSelected
+                    ? '#111'
+                    : 'white',
+                transition: '0.2s',
+              }}
+            >
+              {color.label}
+            </button>
+          );
+        })}
+      </div>
+    );
   };
 
   return (
@@ -88,22 +147,21 @@ export default function SetupScreen() {
       style={{
         minHeight: '100dvh',
         background: '#0d1117',
-        padding: '24px 20px',
+        padding: '32px 20px',
         maxWidth: 430,
         margin: '0 auto',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center',
       }}
     >
       <h1
         style={{
           fontFamily: 'Figtree',
-          fontSize: '2rem',
+          fontSize: '2.2rem',
           fontWeight: 900,
           color: 'white',
-          marginBottom: 8,
           textAlign: 'center',
+          marginBottom: 10,
         }}
       >
         HITSTER
@@ -111,24 +169,28 @@ export default function SetupScreen() {
 
       <p
         style={{
+          textAlign: 'center',
+          color: '#8892a4',
+          marginBottom: 32,
           fontFamily: 'Figtree',
           fontSize: '0.95rem',
-          color: '#8892a4',
-          textAlign: 'center',
-          marginBottom: 32,
         }}
       >
-        Configurá los equipos para comenzar
+        Configurá los equipos
       </p>
 
-      {/* Equipo 1 */}
-      <div style={{ marginBottom: 28 }}>
+      {/* EQUIPO 1 */}
+      <div
+        style={{
+          marginBottom: 28,
+        }}
+      >
         <p
           style={{
+            color: 'white',
             fontFamily: 'Figtree',
             fontWeight: 700,
-            fontSize: '0.85rem',
-            color: 'white',
+            fontSize: '0.9rem',
             marginBottom: 10,
           }}
         >
@@ -138,73 +200,44 @@ export default function SetupScreen() {
         <input
           value={team1Name}
           onChange={(e) =>
-            setTeam1Name(e.target.value)
+            setTeam1Name(
+              e.target.value
+            )
           }
           placeholder="Nombre del equipo"
           style={{
             width: '100%',
             padding: '14px 16px',
             borderRadius: 14,
-            border: '1px solid #2a3347',
+            border:
+              '1px solid #2a3347',
             background: '#161b27',
             color: 'white',
             fontFamily: 'Figtree',
             fontSize: '0.95rem',
-            marginBottom: 14,
             outline: 'none',
+            marginBottom: 14,
           }}
         />
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns:
-              'repeat(2, 1fr)',
-            gap: 10,
-          }}
-        >
-          {COLORS.map((color) => (
-            <button
-              key={color.id}
-              type="button"
-              onClick={() =>
-                setTeam1Color(color.id)
-              }
-              style={{
-                background:
-                  team1Color === color.id
-                    ? color.hex
-                    : '#161b27',
-                border:
-                  team1Color === color.id
-                    ? '2px solid white'
-                    : '1px solid #2a3347',
-                borderRadius: 14,
-                padding: '12px',
-                color:
-                  color.id === 'amarillo' &&
-                  team1Color === color.id
-                    ? '#111'
-                    : 'white',
-                fontFamily: 'Figtree',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              {color.label}
-            </button>
-          ))}
-        </div>
+        {renderColorPicker(
+          team1Color,
+          setTeam1Color
+        )}
       </div>
 
-      {/* Equipo 2 */}
-      <div style={{ marginBottom: 36 }}>
+      {/* EQUIPO 2 */}
+      <div
+        style={{
+          marginBottom: 36,
+        }}
+      >
         <p
           style={{
+            color: 'white',
             fontFamily: 'Figtree',
             fontWeight: 700,
-            fontSize: '0.85rem',
-            color: 'white',
+            fontSize: '0.9rem',
             marginBottom: 10,
           }}
         >
@@ -214,63 +247,30 @@ export default function SetupScreen() {
         <input
           value={team2Name}
           onChange={(e) =>
-            setTeam2Name(e.target.value)
+            setTeam2Name(
+              e.target.value
+            )
           }
           placeholder="Nombre del equipo"
           style={{
             width: '100%',
             padding: '14px 16px',
             borderRadius: 14,
-            border: '1px solid #2a3347',
+            border:
+              '1px solid #2a3347',
             background: '#161b27',
             color: 'white',
             fontFamily: 'Figtree',
             fontSize: '0.95rem',
-            marginBottom: 14,
             outline: 'none',
+            marginBottom: 14,
           }}
         />
 
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns:
-              'repeat(2, 1fr)',
-            gap: 10,
-          }}
-        >
-          {COLORS.map((color) => (
-            <button
-              key={color.id}
-              type="button"
-              onClick={() =>
-                setTeam2Color(color.id)
-              }
-              style={{
-                background:
-                  team2Color === color.id
-                    ? color.hex
-                    : '#161b27',
-                border:
-                  team2Color === color.id
-                    ? '2px solid white'
-                    : '1px solid #2a3347',
-                borderRadius: 14,
-                padding: '12px',
-                color:
-                  color.id === 'amarillo' &&
-                  team2Color === color.id
-                    ? '#111'
-                    : 'white',
-                fontFamily: 'Figtree',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              {color.label}
-            </button>
-          ))}
-        </div>
+        {renderColorPicker(
+          team2Color,
+          setTeam2Color
+        )}
       </div>
 
       <motion.button
