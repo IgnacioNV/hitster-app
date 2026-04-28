@@ -1,103 +1,91 @@
+// hooks/useMusicPlayer.ts
+
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
-export function useMusicPlayer(previewUrl?: string | null) {
+let globalAudio: HTMLAudioElement | null = null;
+
+export function useMusicPlayer(previewUrl: string | null) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const currentUrlRef = useRef<string | null>(null);
-
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    /**
+     * MUY IMPORTANTE:
+     * Antes de reproducir cualquier nueva canción,
+     * detenemos absolutamente cualquier audio anterior.
+     */
+    if (globalAudio) {
+      globalAudio.pause();
+      globalAudio.currentTime = 0;
+      globalAudio.src = '';
+      globalAudio = null;
+    }
+
     if (!previewUrl) {
       console.log('No hay previewUrl disponible');
-      console.log('La canción NO está sonando');
       return;
-    }
-
-    // Evita recrear el mismo audio si la URL no cambió
-    if (currentUrlRef.current === previewUrl) {
-      return;
-    }
-
-    currentUrlRef.current = previewUrl;
-
-    // Limpiar audio anterior SOLO si existe
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.src = '';
-      audioRef.current.load();
-      audioRef.current = null;
     }
 
     const audio = new Audio(previewUrl);
-    audio.preload = 'auto';
+
     audio.volume = 1;
+    audio.loop = false;
+    audio.preload = 'auto';
 
     audioRef.current = audio;
-    setIsLoading(true);
+    globalAudio = audio;
 
-    const handlePlay = () => {
-      console.log('La canción está sonando');
-      setIsPlaying(true);
-      setIsLoading(false);
-    };
+    audio
+      .play()
+      .then(() => {
+        console.log('La canción está sonando');
+      })
+      .catch((error) => {
+        console.log('La canción NO está sonando', error);
+      });
 
-    const handlePause = () => {
-      console.log('La canción NO está sonando');
-      setIsPlaying(false);
-    };
-
-    const handleError = () => {
-      console.log('Error cargando audio');
-      console.log('La canción NO está sonando');
-      setIsLoading(false);
-      setIsPlaying(false);
-    };
-
-    audio.addEventListener('play', handlePlay);
-    audio.addEventListener('pause', handlePause);
-    audio.addEventListener('error', handleError);
-
-    const startPlayback = async () => {
-      try {
-        await audio.play();
-      } catch (error) {
-        console.log('Autoplay bloqueado por navegador');
-        console.error(error);
-        setIsLoading(false);
-      }
-    };
-
-    startPlayback();
-
+    /**
+     * Cleanup automático:
+     * cuando cambia de pantalla,
+     * cambia de turno,
+     * cambia previewUrl,
+     * o desmonta el componente
+     */
     return () => {
-      audio.removeEventListener('play', handlePlay);
-      audio.removeEventListener('pause', handlePause);
-      audio.removeEventListener('error', handleError);
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = '';
+
+        if (globalAudio === audio) {
+          globalAudio = null;
+        }
+
+        console.log('Canción detenida correctamente');
+      }
     };
   }, [previewUrl]);
 
-  const play = async () => {
-    if (!audioRef.current) return;
+  /**
+   * Stop manual:
+   * usar cuando termina reveal / siguiente turno
+   */
+  const stopMusic = () => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.src = '';
 
-    try {
-      await audioRef.current.play();
-    } catch (error) {
-      console.error(error);
+      if (globalAudio === audioRef.current) {
+        globalAudio = null;
+      }
+
+      console.log('Canción detenida manualmente');
     }
   };
 
-  const pause = () => {
-    if (!audioRef.current) return;
-    audioRef.current.pause();
-  };
-
   return {
-    play,
-    pause,
-    isPlaying,
-    isLoading,
+    stopMusic,
   };
 }

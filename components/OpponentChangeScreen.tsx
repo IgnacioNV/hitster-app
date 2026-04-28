@@ -39,17 +39,19 @@ export default function OpponentChangeScreen() {
     .toString()
     .padStart(2, '0');
 
+  /**
+   * El nuevo useMusicPlayer ya NO devuelve:
+   * play / pause / isPlaying / isLoading
+   *
+   * Ahora reproduce automáticamente
+   * y solamente expone stopMusic()
+   */
+  useMusicPlayer(currentSong?.previewUrl ?? null);
+
   if (!currentSong) return null;
 
-  const {
-    play,
-    pause,
-    isPlaying,
-    isLoading,
- } = useMusicPlayer(currentSong?.previewUrl ?? undefined);
-
   const handleSelect = (index: number) => {
-    // No puede elegir la misma posición que eligió el rival
+    // no puede elegir la misma posición del rival
     if (index === currentPlacementIndex) return;
 
     setOpponentPlacement(index);
@@ -70,7 +72,7 @@ export default function OpponentChangeScreen() {
         margin: '0 auto',
       }}
     >
-      {/* Header */}
+      {/* HEADER */}
       <div
         style={{
           display: 'flex',
@@ -191,7 +193,7 @@ export default function OpponentChangeScreen() {
 
       <TeamScores />
 
-      {/* Audio */}
+      {/* AUDIO */}
       <p
         style={{
           fontFamily: 'Figtree',
@@ -211,51 +213,17 @@ export default function OpponentChangeScreen() {
           borderRadius: 14,
           padding: '24px 20px',
           display: 'flex',
-          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
           marginBottom: 20,
-          minHeight: 180,
+          minHeight: 160,
+          boxShadow: `0 0 30px ${bg}20`,
         }}
       >
         <Waveform color={bg} />
-
-        <div
-          style={{
-            marginTop: 20,
-            width: '100%',
-          }}
-        >
-          {currentSong?.previewUrl ? (
-            <button
-              onClick={isPlaying ? pause : play}
-              className="btn-primary"
-              style={{
-                width: '100%',
-              }}
-            >
-              {isLoading
-                ? 'CARGANDO...'
-                : isPlaying
-                ? 'PAUSAR'
-                : '▶ REPRODUCIR CANCIÓN'}
-            </button>
-          ) : (
-            <div
-              style={{
-                textAlign: 'center',
-                fontFamily: 'Figtree',
-                fontSize: '0.85rem',
-                color: '#8892a4',
-              }}
-            >
-              Vista previa no disponible para esta canción
-            </div>
-          )}
-        </div>
       </div>
 
-      {/* Timeline */}
+      {/* TIMELINE */}
       <p
         style={{
           fontFamily: 'Figtree',
@@ -285,6 +253,7 @@ export default function OpponentChangeScreen() {
         />
       </div>
 
+      {/* BOTÓN CONFIRMAR */}
       <motion.button
         whileTap={{ scale: 0.97 }}
         className="btn-primary"
@@ -293,7 +262,10 @@ export default function OpponentChangeScreen() {
           confirmOpponentChange();
         }}
         style={{
-          opacity: opponentPlacementIndex === null ? 0.5 : 1,
+          opacity:
+            opponentPlacementIndex === null
+              ? 0.5
+              : 1,
         }}
       >
         CONFIRMAR
