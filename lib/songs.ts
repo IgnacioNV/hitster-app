@@ -77,8 +77,7 @@ export const songs: Song[] = [
   { id: '54', title: 'Aprendizaje', artist: 'Sui Generis', year: 1972, previewUrl: null },
 
   { id: '55', title: 'El Oso', artist: 'Moris', year: 1970, previewUrl: null },
-  { id: '56', title: 'Avenida de las Camelias', artist: 'Litto Nebbia', year: 1969, previewUrl: null },
-
+  
   { id: '57', title: 'Tren al Sur', artist: 'Los Prisioneros', year: 1990, previewUrl: null },
   { id: '58', title: 'Persiana Americana', artist: 'Soda Stereo', year: 1986, previewUrl: null },
   { id: '59', title: 'Zoom', artist: 'Soda Stereo', year: 1995, previewUrl: null },
