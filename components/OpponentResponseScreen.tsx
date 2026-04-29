@@ -285,21 +285,28 @@ export default function OpponentResponseScreen() {
         }}
       >
         <motion.button
-          whileTap={{ scale: 0.97 }}
-          className="btn-secondary"
-          onClick={opponentChange}
-          disabled={
-            opponentTeam.robberyTokens <= 0
-          }
-          style={{
-            opacity:
-              opponentTeam.robberyTokens <= 0
-                ? 0.4
-                : 1,
-          }}
+        whileTap={{ scale: 0.97 }}
+        onClick={opponentChange}
+        style={{
+          width: '100%',
+          padding: '16px 20px',
+          borderRadius: 16,
+          border: '1.5px solid rgba(255,255,255,0.85)',
+          background: 'transparent',
+          color: 'white',
+          fontFamily: 'Figtree',
+          fontSize: '0.95rem',
+          fontWeight: 800,
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          cursor: 'pointer',
+          outline: 'none',
+          marginTop: 12,
+          transition: 'all 0.2s ease',
+        }}
         >
-          REALIZAR CAMBIOS
-        </motion.button>
+  REALIZAR CAMBIOS
+</motion.button>
 
         <motion.button
           whileTap={{ scale: 0.97 }}

@@ -1,37 +1,54 @@
 'use client';
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore, TeamColor } from '@/lib/store';
-import TeamScores from './TeamScores';
 
-const COLOR_HEX: Record<TeamColor, string> = {
-  rosa: '#e8197d', naranja: '#f47c3c', amarillo: '#f5c842', celeste: '#3db8f5',
-};
+import { motion } from 'framer-motion';
+import { useGameStore } from '@/lib/store';
+import TeamScores from './TeamScores';
 
 export default function RevealScreen() {
   const {
-    teams, currentTeamIndex, currentSong, revealResult,
-    nextTurn, phase,
+    revealResult,
+    robberyMessage,
+    nextTurn,
+    currentSong,
+    teams,
+    currentTeamIndex,
   } = useGameStore();
-
-  const [revealed, setRevealed] = useState(false);
-
-  const currentTeam = teams[currentTeamIndex];
-  const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
-  const opponentTeam = teams[opponentIndex];
 
   if (!currentSong) return null;
 
-  const resultLabel = () => {
-    switch (revealResult) {
-      case 'team_correct': return { text: '¡CORRECTO!', color: '#22c55e', by: currentTeam.name };
-      case 'opponent_correct': return { text: '¡ROBO EXITOSO!', color: COLOR_HEX[opponentTeam.color], by: opponentTeam.name };
-      case 'both_wrong': return { text: 'INCORRECTO', color: '#ef4444', by: null };
-      default: return null;
+  const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
+
+  const getResultConfig = () => {
+    if (revealResult === 'team_correct') {
+      return {
+        title: '¡CORRECTO!',
+        subtitle: `Punto para ${teams[currentTeamIndex].name}`,
+        border: '1px solid rgba(34, 197, 94, 0.35)',
+        glow: '0 0 0 1px rgba(34,197,94,0.12)',
+        titleColor: '#22c55e',
+      };
     }
+
+    if (revealResult === 'opponent_correct') {
+      return {
+        title: '¡ROBO EXITOSO!',
+        subtitle: `Punto para ${teams[opponentIndex].name}`,
+        border: '1px solid rgba(59, 130, 246, 0.35)',
+        glow: '0 0 0 1px rgba(59,130,246,0.12)',
+        titleColor: '#3b82f6',
+      };
+    }
+
+    return {
+      title: '¡INCORRECTO!',
+      subtitle: 'El punto se pierde',
+      border: '1px solid rgba(239, 68, 68, 0.35)',
+      glow: '0 0 0 1px rgba(239,68,68,0.12)',
+      titleColor: '#ef4444',
+    };
   };
 
-  const result = resultLabel();
+  const result = getResultConfig();
 
   return (
     <motion.div
@@ -39,143 +56,133 @@ export default function RevealScreen() {
       animate={{ opacity: 1 }}
       style={{
         minHeight: '100dvh',
-        background: '#0d1117',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '16px 20px',
-        paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
+        background: '#07111d',
+        padding: '24px 20px',
         maxWidth: 430,
         margin: '0 auto',
-        alignItems: 'center',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       <TeamScores />
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '100%', gap: 24 }}>
+      {/* CARD DE LA CANCIÓN */}
+      <div
+        style={{
+          marginTop: 40,
+          background: '#46B5F0',
+          borderRadius: 28,
+          padding: '38px 24px',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minHeight: 320,
+        }}
+      >
+        <p
+          style={{
+            fontSize: '1.15rem',
+            fontWeight: 700,
+            color: 'white',
+            marginBottom: 18,
+            textAlign: 'center',
+          }}
+        >
+          {currentSong.artist}
+        </p>
 
-        {/* Card flip area */}
-        <AnimatePresence mode="wait">
-          {!revealed ? (
-            <motion.div
-              key="hidden"
-              initial={{ rotateY: 0 }}
-              exit={{ rotateY: 90, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              onClick={() => setRevealed(true)}
-              style={{
-                background: '#2d1e3e',
-                border: '1.5px solid #4a2d6b',
-                borderRadius: 20,
-                padding: '40px 32px',
-                textAlign: 'center',
-                cursor: 'pointer',
-                width: '100%',
-              }}
-            >
-              <div style={{ fontSize: '3rem', marginBottom: 16 }}>🎵</div>
-              <p style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.1rem', color: 'white', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                Toca para revelar
-              </p>
-              <p style={{ fontFamily: 'Figtree', fontSize: '0.8rem', color: '#8892a4', marginTop: 8 }}>
-                ¿Quién acertó?
-              </p>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="revealed"
-              initial={{ rotateY: -90, opacity: 0 }}
-              animate={{ rotateY: 0, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-              style={{ width: '100%' }}
-            >
-              {/* Song reveal card */}
-              <div style={{
-                background: COLOR_HEX[currentTeam.color],
-                borderRadius: 20,
-                padding: '32px 24px',
-                textAlign: 'center',
-                marginBottom: 20,
-              }}>
-                <p style={{
-                  fontFamily: 'Figtree',
-                  fontSize: '1.1rem',
-                  fontWeight: 600,
-                  color: currentTeam.color === 'amarillo' ? '#1a1a1a' : 'white',
-                  opacity: 0.9,
-                  marginBottom: 8,
-                }}>
-                  {currentSong.artist}
-                </p>
-                <p style={{
-                  fontFamily: 'Figtree',
-                  fontSize: '4rem',
-                  fontWeight: 900,
-                  color: currentTeam.color === 'amarillo' ? '#1a1a1a' : 'white',
-                  lineHeight: 1,
-                  marginBottom: 8,
-                }}>
-                  {currentSong.year}
-                </p>
-                <p style={{
-                  fontFamily: 'Figtree',
-                  fontSize: '1.1rem',
-                  fontWeight: 600,
-                  color: currentTeam.color === 'amarillo' ? '#1a1a1a' : 'white',
-                  opacity: 0.9,
-                }}>
-                  {currentSong.title}
-                </p>
-              </div>
+        <h1
+          style={{
+            fontSize: '5.2rem',
+            fontWeight: 900,
+            lineHeight: 1,
+            color: 'white',
+            marginBottom: 24,
+          }}
+        >
+          {currentSong.year}
+        </h1>
 
-              {/* Result */}
-              {result && (
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.2, type: 'spring', stiffness: 300 }}
-                  style={{
-                    background: '#1a2035',
-                    borderRadius: 14,
-                    padding: '20px',
-                    textAlign: 'center',
-                    border: `2px solid ${result.color}40`,
-                  }}
-                >
-                  <p style={{
-                    fontFamily: 'Figtree',
-                    fontWeight: 900,
-                    fontSize: '1.8rem',
-                    color: result.color,
-                    letterSpacing: '0.05em',
-                    marginBottom: result.by ? 6 : 0,
-                  }}>
-                    {result.text}
-                  </p>
-                  {result.by && (
-                    <p style={{ fontFamily: 'Figtree', fontSize: '0.85rem', color: '#8892a4' }}>
-                      Punto para {result.by}
-                    </p>
-                  )}
-                </motion.div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <p
+          style={{
+            fontSize: '1.2rem',
+            fontWeight: 600,
+            color: 'white',
+            textAlign: 'center',
+          }}
+        >
+          {currentSong.title}
+        </p>
       </div>
 
-      {revealed && (
+      {/* RESULTADO */}
+      <div
+        style={{
+          marginTop: 26,
+          background: '#18223d',
+          borderRadius: 24,
+          padding: '34px 22px',
+          border: result.border,
+          boxShadow: result.glow,
+        }}
+      >
+        <h2
+          style={{
+            textAlign: 'center',
+            fontSize: '2.4rem',
+            fontWeight: 900,
+            color: result.titleColor,
+            marginBottom: 14,
+            letterSpacing: '0.02em',
+          }}
+        >
+          {result.title}
+        </h2>
+
+        <p
+          style={{
+            textAlign: 'center',
+            fontSize: '1rem',
+            color: '#8f9bb3',
+            fontWeight: 500,
+            lineHeight: 1.6,
+          }}
+        >
+          {result.subtitle}
+        </p>
+
+        {robberyMessage && (
+          <p
+            style={{
+              marginTop: 14,
+              textAlign: 'center',
+              fontSize: '0.85rem',
+              fontWeight: 500,
+              color: '#7f8aa3',
+              lineHeight: 1.6,
+            }}
+          >
+            {robberyMessage}
+          </p>
+        )}
+      </div>
+
+      {/* BOTÓN */}
+      <div
+        style={{
+          marginTop: 'auto',
+          paddingTop: 32,
+        }}
+      >
         <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
           whileTap={{ scale: 0.97 }}
           className="btn-primary"
           onClick={nextTurn}
-          style={{ width: '100%' }}
         >
           SIGUIENTE TURNO
         </motion.button>
-      )}
+      </div>
     </motion.div>
   );
 }
