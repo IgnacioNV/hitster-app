@@ -6,6 +6,7 @@ import {
   TeamColor,
 } from '@/lib/store';
 import TeamScores from './TeamScores';
+import { useMusicPlayer } from '@/hooks/useMusicPlayer';
 
 const COLOR_HEX: Record<TeamColor, string> = {
   rosa: '#e8197d',
@@ -42,6 +43,9 @@ export default function OpponentResponseScreen() {
     .padStart(2, '0');
 
   if (!currentSong) return null;
+
+  // Keep audio playing — same URL, no restart
+  useMusicPlayer(currentSong.previewUrl, { persistOnUnmount: true });
 
   const previewTimeline = [...currentTeam.timeline];
 

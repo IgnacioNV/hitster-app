@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore, TeamColor } from '@/lib/store';
 import TeamScores from './TeamScores';
 import Timeline from './Timeline';
 import Waveform from './Waveform';
+import { useMusicPlayer } from '@/hooks/useMusicPlayer';
 
 const COLOR_HEX: Record<TeamColor, string> = {
   rosa: '#e8197d',
@@ -24,67 +25,48 @@ export default function TurnActiveScreen() {
     confirmTurn,
     timeLeft,
     decrementTime,
+    triggerTimeout,
   } = useGameStore();
 
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-
   const currentTeam = teams[currentTeamIndex];
+  const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
+  const opponentTeam = teams[opponentIndex];
   const bg = COLOR_HEX[currentTeam.color];
 
-  const mins = Math.floor(timeLeft / 60)
-    .toString()
-    .padStart(2, '0');
+  // Show timeout banner for 3s before transitioning
+  const [showTimeoutBanner, setShowTimeoutBanner] = useState(false);
+  const timeoutFiredRef = useRef(false);
 
-  const secs = (timeLeft % 60)
-    .toString()
-    .padStart(2, '0');
+  const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+  const secs = (timeLeft % 60).toString().padStart(2, '0');
 
+  // Audio persists on unmount so it keeps playing into timeout_steal screen
+  useMusicPlayer(currentSong?.previewUrl ?? null, { persistOnUnmount: true });
+
+  // Countdown timer
   useEffect(() => {
-    const interval = setInterval(() => {
-      decrementTime();
-    }, 1000);
+    if (showTimeoutBanner) return; // freeze timer while banner is visible
+    if (timeLeft <= 0) return;
 
+    const interval = setInterval(() => decrementTime(), 1000);
     return () => clearInterval(interval);
-  }, [decrementTime]);
+  }, [decrementTime, showTimeoutBanner, timeLeft]);
 
+  // When time hits 0, show banner then transition
   useEffect(() => {
-    if (!currentSong?.previewUrl) return;
+    if (timeLeft <= 0 && !timeoutFiredRef.current) {
+      timeoutFiredRef.current = true;
+      setShowTimeoutBanner(true);
 
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+      setTimeout(() => {
+        triggerTimeout(); // transitions phase → timeout_steal
+      }, 3000);
     }
-
-    const audio = new Audio(currentSong.previewUrl);
-    audio.volume = 1;
-    audio.loop = true;
-
-    audio
-      .play()
-      .then(() => {
-        console.log('La canción está sonando');
-      })
-      .catch(() => {
-        console.log('La canción NO está sonando');
-      });
-
-    audioRef.current = audio;
-
-    return () => {
-      audio.pause();
-      audio.currentTime = 0;
-    };
-  }, [currentSong]);
+  }, [timeLeft, triggerTimeout]);
 
   const handleConfirm = () => {
     if (currentPlacementIndex === null) return;
-
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current = null;
-    }
-
+    // Audio will keep playing — next screen picks it up via persistOnUnmount
     confirmTurn();
   };
 
@@ -100,86 +82,103 @@ export default function TurnActiveScreen() {
         display: 'flex',
         flexDirection: 'column',
         padding: '16px 20px',
-        paddingBottom:
-          'max(20px, env(safe-area-inset-bottom))',
+        paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
         maxWidth: 430,
         margin: '0 auto',
+        position: 'relative',
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 16,
-        }}
-      >
-        <div>
-          <p
+      {/* TIMEOUT BANNER — full-screen overlay for 3 seconds */}
+      <AnimatePresence>
+        {showTimeoutBanner && (
+          <motion.div
+            key="timeout-banner"
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
             style={{
-              fontFamily: 'Figtree',
-              fontWeight: 700,
-              fontSize: '0.7rem',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: '#8892a4',
-              marginBottom: 6,
+              position: 'absolute',
+              inset: 0,
+              zIndex: 50,
+              background: 'rgba(13, 17, 23, 0.93)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: 32,
+              borderRadius: 0,
+              textAlign: 'center',
             }}
           >
+            {/* Pulsing clock icon */}
+            <motion.div
+              animate={{ scale: [1, 1.15, 1] }}
+              transition={{ duration: 0.8, repeat: Infinity }}
+              style={{ fontSize: '3.5rem', marginBottom: 20 }}
+            >
+              ⏱️
+            </motion.div>
+
+            <p style={{
+              fontFamily: 'Figtree, sans-serif',
+              fontWeight: 900,
+              fontSize: '1.4rem',
+              color: '#ff4d4d',
+              letterSpacing: '0.04em',
+              textTransform: 'uppercase',
+              lineHeight: 1.2,
+              marginBottom: 16,
+            }}>
+              ¡SE TERMINÓ EL TIEMPO!
+            </p>
+
+            <div style={{
+              background: `${COLOR_HEX[opponentTeam.color]}20`,
+              border: `2px solid ${COLOR_HEX[opponentTeam.color]}`,
+              borderRadius: 14,
+              padding: '14px 24px',
+            }}>
+              <span style={{
+                fontFamily: 'Figtree, sans-serif',
+                fontWeight: 800,
+                fontSize: '1rem',
+                color: COLOR_HEX[opponentTeam.color],
+              }}>
+                ¡{opponentTeam.name} puede robar la carta!
+              </span>
+            </div>
+
+            <p style={{
+              fontFamily: 'Figtree, sans-serif',
+              fontSize: '0.8rem',
+              color: '#8892a4',
+              marginTop: 20,
+            }}>
+              La canción sigue sonando...
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── HEADER ── */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div>
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6 }}>
             TURNO:
           </p>
-
-          <div
-            style={{
-              background: bg,
-              borderRadius: 6,
-              padding: '4px 10px',
-              display: 'inline-block',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: 'Figtree',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                color:
-                  currentTeam.color === 'amarillo'
-                    ? '#111'
-                    : 'white',
-              }}
-            >
+          <div style={{ background: bg, borderRadius: 6, padding: '4px 10px', display: 'inline-block' }}>
+            <span style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: currentTeam.color === 'amarillo' ? '#111' : 'white' }}>
               {currentTeam.name}
             </span>
           </div>
         </div>
 
         <div style={{ textAlign: 'right' }}>
-          <p
-            style={{
-              fontFamily: 'Figtree',
-              fontWeight: 700,
-              fontSize: '0.7rem',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: '#8892a4',
-              marginBottom: 6,
-            }}
-          >
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6 }}>
             TIEMPO RESTANTE
           </p>
-
-          <span
-            style={{
-              fontFamily: 'Figtree',
-              fontWeight: 800,
-              fontSize: '1.4rem',
-              color:
-                timeLeft <= 20
-                  ? '#ff4d4d'
-                  : 'white',
-            }}
-          >
+          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.4rem', color: timeLeft <= 20 ? '#ff4d4d' : 'white' }}>
             {mins}:{secs}
           </span>
         </div>
@@ -187,32 +186,17 @@ export default function TurnActiveScreen() {
 
       <TeamScores />
 
-      {/* Audio visual */}
-      <p
-        style={{
-          fontFamily: 'Figtree',
-          fontWeight: 700,
-          fontSize: '0.85rem',
-          color: 'white',
-          marginBottom: 8,
-        }}
-      >
+      {/* ── AUDIO VISUAL ── */}
+      <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: 'white', marginBottom: 8 }}>
         Sonando ahora...
       </p>
 
       <motion.div
         animate={{
           scale: [1, 1.03, 1],
-          boxShadow: [
-            `0 0 0px ${bg}`,
-            `0 0 30px ${bg}`,
-            `0 0 0px ${bg}`,
-          ],
+          boxShadow: [`0 0 0px ${bg}`, `0 0 30px ${bg}`, `0 0 0px ${bg}`],
         }}
-        transition={{
-          duration: 1.5,
-          repeat: Infinity,
-        }}
+        transition={{ duration: 1.5, repeat: Infinity }}
         style={{
           background: '#161b27',
           border: `1.5px solid ${bg}50`,
@@ -228,26 +212,12 @@ export default function TurnActiveScreen() {
         <Waveform color={bg} />
       </motion.div>
 
-      {/* Timeline */}
-      <p
-        style={{
-          fontFamily: 'Figtree',
-          fontWeight: 700,
-          fontSize: '0.85rem',
-          color: 'white',
-          marginBottom: 8,
-        }}
-      >
+      {/* ── TIMELINE ── */}
+      <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: 'white', marginBottom: 8 }}>
         Línea de tiempo
       </p>
 
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          marginBottom: 16,
-        }}
-      >
+      <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16 }}>
         <Timeline
           timeline={currentTeam.timeline}
           color={currentTeam.color}
@@ -261,12 +231,7 @@ export default function TurnActiveScreen() {
         whileTap={{ scale: 0.97 }}
         className="btn-primary"
         onClick={handleConfirm}
-        style={{
-          opacity:
-            currentPlacementIndex === null
-              ? 0.5
-              : 1,
-        }}
+        style={{ opacity: currentPlacementIndex === null ? 0.5 : 1 }}
       >
         CONFIRMAR TURNO
       </motion.button>

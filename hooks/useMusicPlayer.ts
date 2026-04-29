@@ -1,91 +1,91 @@
 // hooks/useMusicPlayer.ts
+// Global singleton audio — survives React component unmounts/remounts.
+// This is intentional: the song must keep playing while screens transition.
 
 'use client';
 
 import { useEffect, useRef } from 'react';
 
-let globalAudio: HTMLAudioElement | null = null;
+// Module-level singleton: one audio instance for the whole app lifetime.
+let _audio: HTMLAudioElement | null = null;
+let _currentUrl: string | null = null;
 
-export function useMusicPlayer(previewUrl: string | null) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+function getOrCreateAudio(url: string): HTMLAudioElement {
+  // Same URL → reuse existing instance, don't restart
+  if (_audio && _currentUrl === url) {
+    return _audio;
+  }
+
+  // Different URL → tear down old, build new
+  if (_audio) {
+    _audio.pause();
+    _audio.src = '';
+    _audio.load();
+    _audio = null;
+  }
+
+  const audio = new Audio();
+  audio.crossOrigin = 'anonymous';
+  audio.preload = 'auto';
+  audio.loop = true;
+  audio.volume = 0.9;
+  audio.src = url;
+  audio.load();
+
+  _audio = audio;
+  _currentUrl = url;
+  return audio;
+}
+
+export function stopGlobalAudio() {
+  if (_audio) {
+    _audio.pause();
+    _audio.src = '';
+    _audio.load();
+    _audio = null;
+    _currentUrl = null;
+  }
+}
+
+interface UseMusicPlayerOptions {
+  // If true, audio persists even when this hook's component unmounts.
+  // Used for screens that hand off to the next screen mid-song.
+  persistOnUnmount?: boolean;
+}
+
+export function useMusicPlayer(
+  previewUrl: string | null,
+  options: UseMusicPlayerOptions = {}
+) {
+  const { persistOnUnmount = false } = options;
+  const playAttemptedRef = useRef(false);
 
   useEffect(() => {
-    /**
-     * MUY IMPORTANTE:
-     * Antes de reproducir cualquier nueva canción,
-     * detenemos absolutamente cualquier audio anterior.
-     */
-    if (globalAudio) {
-      globalAudio.pause();
-      globalAudio.currentTime = 0;
-      globalAudio.src = '';
-      globalAudio = null;
-    }
+    if (!previewUrl) return;
 
-    if (!previewUrl) {
-      console.log('No hay previewUrl disponible');
-      return;
-    }
+    const audio = getOrCreateAudio(previewUrl);
 
-    const audio = new Audio(previewUrl);
-
-    audio.volume = 1;
-    audio.loop = false;
-    audio.preload = 'auto';
-
-    audioRef.current = audio;
-    globalAudio = audio;
-
-    audio
-      .play()
-      .then(() => {
-        console.log('La canción está sonando');
-      })
-      .catch((error) => {
-        console.log('La canción NO está sonando', error);
+    // Only attempt play if it's not already playing
+    if (audio.paused && !playAttemptedRef.current) {
+      playAttemptedRef.current = true;
+      audio.play().catch((err) => {
+        // NotAllowedError is expected if no prior user gesture.
+        // We surface this silently — the player UI handles the retry.
+        console.warn('[MusicPlayer] play() blocked:', err.name);
+        playAttemptedRef.current = false;
       });
-
-    /**
-     * Cleanup automático:
-     * cuando cambia de pantalla,
-     * cambia de turno,
-     * cambia previewUrl,
-     * o desmonta el componente
-     */
-    return () => {
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.src = '';
-
-        if (globalAudio === audio) {
-          globalAudio = null;
-        }
-
-        console.log('Canción detenida correctamente');
-      }
-    };
-  }, [previewUrl]);
-
-  /**
-   * Stop manual:
-   * usar cuando termina reveal / siguiente turno
-   */
-  const stopMusic = () => {
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current.src = '';
-
-      if (globalAudio === audioRef.current) {
-        globalAudio = null;
-      }
-
-      console.log('Canción detenida manualmente');
     }
-  };
 
-  return {
-    stopMusic,
-  };
+    return () => {
+      // Only stop audio if we're NOT handing off to the next screen
+      if (!persistOnUnmount) {
+        stopGlobalAudio();
+      }
+      // If persistOnUnmount=true, audio keeps playing for the next screen.
+    };
+  }, [previewUrl, persistOnUnmount]);
+
+  const stopMusic = () => stopGlobalAudio();
+
+  return { stopMusic };
 }

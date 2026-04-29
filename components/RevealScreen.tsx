@@ -1,4 +1,6 @@
 'use client';
+import { useEffect } from 'react';
+import { stopGlobalAudio } from '@/hooks/useMusicPlayer';
 
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/lib/store';
@@ -15,6 +17,9 @@ export default function RevealScreen() {
   } = useGameStore();
 
   if (!currentSong) return null;
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { stopGlobalAudio(); }, []);
 
   const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
 
