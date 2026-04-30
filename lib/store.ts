@@ -108,7 +108,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   opponentPlacementIndex: null,
   timeoutStealIndex: null,
 
-  timeLeft: 90,
+  timeLeft: 45,
   timerActive: false,
 
   allSongs: [],
@@ -137,8 +137,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     if (get().phase !== 'turn_active') return;
     set({
       phase: 'timeout_steal',
-      timerActive: false,
-      currentPlacementIndex: null,  // original team's placement is void
+      timerActive: true,
+      timeLeft: 30,                 // rival has 30s to steal
+      currentPlacementIndex: null,
       timeoutStealIndex: null,
     });
   },
@@ -298,7 +299,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       opponentPlacementIndex: null,
       timeoutStealIndex: null,
       phase: 'turn_active',
-      timeLeft: 90,
+      timeLeft: 45,
       timerActive: true,
       revealResult: null,
       opponentChoseChange: false,
@@ -315,7 +316,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     currentPlacementIndex: null,
     opponentPlacementIndex: null,
     timeoutStealIndex: null,
-    timeLeft: 90,
+    timeLeft: 45,
     timerActive: false,
     allSongs: [],
     usedSongIds: new Set(),

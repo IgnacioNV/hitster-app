@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGameStore, TeamColor } from '@/lib/store';
 import TeamScores from './TeamScores';
@@ -20,9 +21,27 @@ export default function TimeoutStealScreen() {
     currentTeamIndex,
     currentSong,
     timeoutStealIndex,
+    timeLeft,
+    decrementTime,
     setTimeoutStealIndex,
     confirmTimeoutSteal,
+    nextTurn,
   } = useGameStore();
+
+  const expiredRef = useRef(false);
+
+  // 30s countdown — if it hits 0, card is lost and next normal turn starts
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      if (!expiredRef.current) {
+        expiredRef.current = true;
+        nextTurn();
+      }
+      return;
+    }
+    const t = setInterval(() => decrementTime(), 1000);
+    return () => clearInterval(t);
+  }, [timeLeft, decrementTime, nextTurn]);
 
   const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
   const opponentTeam = teams[opponentIndex];
@@ -74,19 +93,12 @@ export default function TimeoutStealScreen() {
           </div>
         </div>
 
-        {/* No timer — timeout already fired */}
-        <div style={{
-          background: '#2a1a1a',
-          border: '1.5px solid #5a2020',
-          borderRadius: 8,
-          padding: '6px 12px',
-          textAlign: 'center',
-        }}>
-          <p style={{ fontFamily: 'Figtree', fontSize: '0.6rem', color: '#e87272', marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            TIEMPO
+        <div style={{ textAlign: 'right' }}>
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6 }}>
+            TIEMPO RESTANTE
           </p>
-          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.1rem', color: '#ff4d4d' }}>
-            00:00
+          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.4rem', color: timeLeft <= 10 ? '#ff4d4d' : 'white' }}>
+            00:{timeLeft.toString().padStart(2, '0')}
           </span>
         </div>
       </div>
@@ -109,9 +121,9 @@ export default function TimeoutStealScreen() {
           fontFamily: 'Figtree', fontSize: '0.8rem', fontWeight: 600,
           color: 'white', lineHeight: 1.4,
         }}>
-          El rival perdió el tiempo. Podés ubicar la canción en{' '}
-          <span style={{ color: bg, fontWeight: 800 }}>tu propia línea de tiempo</span>.
-          {' '}Sin costo de fichas.
+          El rival perdió el tiempo. Tenés{' '}
+          <span style={{ color: bg, fontWeight: 800 }}>30 segundos</span>
+          {' '}para ubicar la canción en tu propia línea de tiempo. Sin costo de fichas.
         </p>
       </div>
 
