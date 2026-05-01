@@ -7,6 +7,7 @@ import TeamScores from './TeamScores';
 import Waveform from './Waveform';
 import Timeline from './Timeline';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
+import AbandonButton from './AbandonButton';
 
 const COLOR_HEX: Record<TeamColor, string> = {
   rosa: '#e8197d',
@@ -60,6 +61,7 @@ export default function TimeoutStealScreen() {
       style={{
         minHeight: '100dvh',
         background: '#0d1117',
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         padding: '16px 20px',
@@ -103,6 +105,7 @@ export default function TimeoutStealScreen() {
         </div>
       </div>
 
+      <AbandonButton />
       <TeamScores />
 
       {/* ── CONTEXT BANNER ── */}

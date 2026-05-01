@@ -7,6 +7,7 @@ import TeamScores from './TeamScores';
 import Timeline from './Timeline';
 import Waveform from './Waveform';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
+import AbandonButton from './AbandonButton';
 
 const COLOR_HEX: Record<TeamColor, string> = {
   rosa: '#e8197d',
@@ -79,6 +80,7 @@ export default function TurnActiveScreen() {
       style={{
         minHeight: '100dvh',
         background: '#0d1117',
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         padding: '16px 20px',
@@ -184,6 +186,7 @@ export default function TurnActiveScreen() {
         </div>
       </div>
 
+      <AbandonButton />
       <TeamScores />
 
       {/* ── AUDIO VISUAL ── */}

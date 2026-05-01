@@ -7,6 +7,7 @@ import {
 } from '@/lib/store';
 import TeamScores from './TeamScores';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
+import AbandonButton from './AbandonButton';
 
 const COLOR_HEX: Record<TeamColor, string> = {
   rosa: '#e8197d',
@@ -64,6 +65,7 @@ export default function OpponentResponseScreen() {
       style={{
         minHeight: '100dvh',
         background: '#0d1117',
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         padding: '16px 20px',
@@ -183,6 +185,7 @@ export default function OpponentResponseScreen() {
         </div>
       </div>
 
+      <AbandonButton />
       <TeamScores />
 
       {/* Preview */}

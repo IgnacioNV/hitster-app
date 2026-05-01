@@ -5,6 +5,7 @@ import { stopGlobalAudio } from '@/hooks/useMusicPlayer';
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/lib/store';
 import TeamScores from './TeamScores';
+import AbandonButton from './AbandonButton';
 
 export default function RevealScreen() {
   const {
@@ -73,6 +74,7 @@ export default function RevealScreen() {
       style={{
         minHeight: '100dvh',
         background: '#07111d',
+        position: 'relative',
         padding: '24px 20px',
         maxWidth: 430,
         margin: '0 auto',
@@ -80,6 +82,7 @@ export default function RevealScreen() {
         flexDirection: 'column',
       }}
     >
+      <AbandonButton />
       <TeamScores />
 
       {/* CARD DE LA CANCIÓN */}
