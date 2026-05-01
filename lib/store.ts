@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { enrichSongWithItunes } from '@/lib/itunes';
 
 export type TeamColor = 'rosa' | 'naranja' | 'amarillo' | 'celeste';
@@ -22,7 +23,7 @@ export interface Team {
 export type GamePhase =
   | 'setup'
   | 'turn_active'
-  | 'timeout_steal'    // NEW: rival gets free steal after timeout
+  | 'timeout_steal'
   | 'opponent_response'
   | 'opponent_change'
   | 'reveal'
@@ -33,6 +34,13 @@ export type RevealResult =
   | 'opponent_correct'
   | 'both_wrong'
   | null;
+
+export interface MatchHistory {
+  id: string;
+  date: number;
+  teams: [Team, Team];
+  winner: string;
+}
 
 interface GameState {
   teams: [Team, Team];
@@ -47,14 +55,15 @@ interface GameState {
   timerActive: boolean;
 
   allSongs: Song[];
-  usedSongIds: Set<string>;
+  usedSongIds: string[]; // Array (not Set) — serializable for localStorage
 
   revealResult: RevealResult;
   opponentChoseChange: boolean;
   robberyMessage: string | null;
 
-  // timeout_steal state
-  timeoutStealIndex: number | null; // where the rival placed during timeout steal
+  timeoutStealIndex: number | null;
+
+  matchHistory: MatchHistory[];
 
   setTeams: (teams: [Team, Team]) => void;
   setPhase: (phase: GamePhase) => void;
@@ -66,8 +75,8 @@ interface GameState {
   decrementTime: () => void;
   setAllSongs: (songs: Song[]) => void;
 
-  triggerTimeout: () => void;         // called when timeLeft hits 0
-  confirmTimeoutSteal: () => void;    // rival confirms placement in timeout_steal phase
+  triggerTimeout: () => void;
+  confirmTimeoutSteal: () => void;
 
   confirmTurn: () => void;
   opponentConfirm: () => void;
@@ -78,10 +87,13 @@ interface GameState {
   resetGame: () => void;
 }
 
+// TEMP: testing winner flow
 const initialTeams: [Team, Team] = [
-  { name: 'Equipo 1', color: 'rosa',   timeline: [], robberyTokens: 4, score: 0 },
-  { name: 'Equipo 2', color: 'celeste', timeline: [], robberyTokens: 4, score: 0 },
+  { name: 'Equipo 1', color: 'rosa',    timeline: [], robberyTokens: 4, score: 8 },
+  { name: 'Equipo 2', color: 'celeste', timeline: [], robberyTokens: 4, score: 8 },
 ];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function isCorrectPlacement(timeline: Song[], song: Song, index: number): boolean {
   const test = [...timeline];
@@ -98,230 +110,289 @@ function insertSongSorted(timeline: Song[], song: Song, index: number): Song[] {
   return updated.sort((a, b) => a.year - b.year);
 }
 
-export const useGameStore = create<GameState>((set, get) => ({
-  teams: initialTeams,
-  currentTeamIndex: 0,
-  phase: 'setup',
+function checkWinner(teams: [Team, Team]): GamePhase | null {
+  if (teams[0].score >= 10 || teams[1].score >= 10) return 'winner';
+  return null;
+}
 
-  currentSong: null,
-  currentPlacementIndex: null,
-  opponentPlacementIndex: null,
-  timeoutStealIndex: null,
+function buildHistoryEntry(teams: [Team, Team]): MatchHistory {
+  return {
+    id: crypto.randomUUID(),
+    date: Date.now(),
+    teams,
+    winner: teams[0].score > teams[1].score ? teams[0].name : teams[1].name,
+  };
+}
 
-  timeLeft: 45,
-  timerActive: false,
+// ─── STORE ───────────────────────────────────────────────────────────────────
 
-  allSongs: [],
-  usedSongIds: new Set(),
+export const useGameStore = create<GameState>()(
+  persist(
+    (set, get) => ({
+      teams: initialTeams,
+      currentTeamIndex: 0,
+      phase: 'setup',
 
-  revealResult: null,
-  opponentChoseChange: false,
-  robberyMessage: null,
-
-  setTeams: (teams) => set({ teams }),
-  setPhase: (phase) => set({ phase }),
-  setCurrentPlacement: (index) => set({ currentPlacementIndex: index }),
-  setOpponentPlacement: (index) => set({ opponentPlacementIndex: index }),
-  setTimeoutStealIndex: (index) => set({ timeoutStealIndex: index }),
-  setTimeLeft: (time) => set({ timeLeft: time }),
-  setTimerActive: (active) => set({ timerActive: active }),
-  decrementTime: () => set((s) => ({ timeLeft: Math.max(0, s.timeLeft - 1) })),
-  setAllSongs: (songs) => set({ allSongs: songs }),
-
-  // ─── TIMEOUT ────────────────────────────────────────────────
-  // Called when timeLeft hits 0 in TurnActiveScreen.
-  // Transitions to timeout_steal — the rival now gets a free attempt
-  // on their OWN timeline. No robbery tokens spent.
-  triggerTimeout: () => {
-    // Guard: only trigger once
-    if (get().phase !== 'turn_active') return;
-    set({
-      phase: 'timeout_steal',
-      timerActive: true,
-      timeLeft: 30,                 // rival has 30s to steal
-      currentPlacementIndex: null,
-      timeoutStealIndex: null,
-    });
-  },
-
-  // Rival confirms their placement during timeout_steal
-  confirmTimeoutSteal: () => {
-    const { teams, currentTeamIndex, currentSong, timeoutStealIndex } = get();
-    if (!currentSong || timeoutStealIndex === null) return;
-
-    const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
-    const opponentTeam = teams[opponentIndex];
-    const updatedTeams = [...teams] as [Team, Team];
-
-    const correct = isCorrectPlacement(opponentTeam.timeline, currentSong, timeoutStealIndex);
-
-    if (correct) {
-      updatedTeams[opponentIndex] = {
-        ...opponentTeam,
-        timeline: insertSongSorted(opponentTeam.timeline, currentSong, timeoutStealIndex),
-        score: opponentTeam.score + 1,
-        // NO robbery token spent — this is a free timeout steal
-      };
-      set({
-        teams: updatedTeams,
-        revealResult: 'opponent_correct',
-        phase: 'reveal',
-        robberyMessage: `¡Tiempo agotado! ${opponentTeam.name} acertó y se lleva el punto.`,
-      });
-    } else {
-      // Both wrong — nobody gets the point, no card added
-      set({
-        revealResult: 'both_wrong',
-        phase: 'reveal',
-        robberyMessage: `¡Tiempo agotado! ${opponentTeam.name} no acertó. Nadie gana el punto.`,
-      });
-    }
-  },
-
-  // ─── NORMAL TURN FLOW ────────────────────────────────────────
-  confirmTurn: () => set({ phase: 'opponent_response', timerActive: false }),
-
-  opponentConfirm: () => {
-    const { teams, currentTeamIndex, currentSong, currentPlacementIndex } = get();
-    if (!currentSong || currentPlacementIndex === null) return;
-
-    const currentTeam = teams[currentTeamIndex];
-    const correct = isCorrectPlacement(currentTeam.timeline, currentSong, currentPlacementIndex);
-    const updatedTeams = [...teams] as [Team, Team];
-
-    if (correct) {
-      updatedTeams[currentTeamIndex] = {
-        ...currentTeam,
-        timeline: insertSongSorted(currentTeam.timeline, currentSong, currentPlacementIndex),
-        score: currentTeam.score + 1,
-      };
-      set({ teams: updatedTeams, revealResult: 'team_correct', phase: 'reveal', opponentChoseChange: false, robberyMessage: null });
-    } else {
-      set({ revealResult: 'both_wrong', phase: 'reveal', opponentChoseChange: false, robberyMessage: null });
-    }
-  },
-
-  opponentChange: () => set({ phase: 'opponent_change', opponentChoseChange: true }),
-
-  confirmOpponentChange: () => {
-    const { teams, currentTeamIndex, currentSong, currentPlacementIndex, opponentPlacementIndex } = get();
-    if (!currentSong || currentPlacementIndex === null || opponentPlacementIndex === null) return;
-
-    const currentTeam = teams[currentTeamIndex];
-    const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
-    const opponentTeam = teams[opponentIndex];
-    const updatedTeams = [...teams] as [Team, Team];
-
-    const currentCorrect  = isCorrectPlacement(currentTeam.timeline, currentSong, currentPlacementIndex);
-    const opponentCorrect = isCorrectPlacement(currentTeam.timeline, currentSong, opponentPlacementIndex);
-
-    if (!currentCorrect && opponentCorrect) {
-      // Successful robbery
-      updatedTeams[opponentIndex] = {
-        ...opponentTeam,
-        timeline: insertSongSorted(opponentTeam.timeline, currentSong, opponentPlacementIndex),
-        score: opponentTeam.score + 1,
-        robberyTokens: Math.max(0, opponentTeam.robberyTokens - 1),
-      };
-      set({
-        teams: updatedTeams,
-        revealResult: 'opponent_correct',
-        phase: 'reveal',
-        robberyMessage: `${opponentTeam.name} robó la carta. ${updatedTeams[opponentIndex].robberyTokens} fichas restantes.`,
-      });
-      return;
-    }
-
-    if (currentCorrect) {
-      // Original team was right, rival wasted a token
-      updatedTeams[currentTeamIndex] = {
-        ...currentTeam,
-        timeline: insertSongSorted(currentTeam.timeline, currentSong, currentPlacementIndex),
-        score: currentTeam.score + 1,
-      };
-      updatedTeams[opponentIndex] = {
-        ...opponentTeam,
-        robberyTokens: Math.max(0, opponentTeam.robberyTokens - 1),
-      };
-      set({
-        teams: updatedTeams,
-        revealResult: 'team_correct',
-        phase: 'reveal',
-        robberyMessage: `${opponentTeam.name} perdió una ficha de robo. ${updatedTeams[opponentIndex].robberyTokens} fichas restantes.`,
-      });
-      return;
-    }
-
-    // Both wrong
-    updatedTeams[opponentIndex] = {
-      ...opponentTeam,
-      robberyTokens: Math.max(0, opponentTeam.robberyTokens - 1),
-    };
-    set({
-      teams: updatedTeams,
-      revealResult: 'both_wrong',
-      phase: 'reveal',
-      robberyMessage: `${opponentTeam.name} perdió una ficha de robo. ${updatedTeams[opponentIndex].robberyTokens} fichas restantes.`,
-    });
-  },
-
-  // ─── NEXT TURN ───────────────────────────────────────────────
-  nextTurn: async () => {
-    const { allSongs, usedSongIds, currentTeamIndex } = get();
-
-    // Check winner first
-    const { teams } = get();
-    if (teams[0].score >= 10 || teams[1].score >= 10) {
-      set({ phase: 'winner' });
-      return;
-    }
-
-    const available = allSongs.filter((s) => !usedSongIds.has(s.id));
-    if (!available.length) return;
-
-    const baseSong = available[Math.floor(Math.random() * available.length)];
-    const updatedUsed = new Set(usedSongIds);
-    updatedUsed.add(baseSong.id);
-
-    let finalSong: Song = { ...baseSong };
-
-    try {
-      const enriched = await enrichSongWithItunes(baseSong.artist, baseSong.title);
-      if (enriched?.previewUrl) finalSong.previewUrl = enriched.previewUrl;
-    } catch {
-      // enrichment failure is non-fatal
-    }
-
-    set({
-      currentTeamIndex: currentTeamIndex === 0 ? 1 : 0,
-      currentSong: finalSong,
+      currentSong: null,
       currentPlacementIndex: null,
       opponentPlacementIndex: null,
       timeoutStealIndex: null,
-      phase: 'turn_active',
+
       timeLeft: 45,
-      timerActive: true,
+      timerActive: false,
+
+      allSongs: [],
+      usedSongIds: [],
+
       revealResult: null,
       opponentChoseChange: false,
       robberyMessage: null,
-      usedSongIds: updatedUsed,
-    });
-  },
 
-  resetGame: () => set({
-    teams: initialTeams,
-    currentTeamIndex: 0,
-    phase: 'setup',
-    currentSong: null,
-    currentPlacementIndex: null,
-    opponentPlacementIndex: null,
-    timeoutStealIndex: null,
-    timeLeft: 45,
-    timerActive: false,
-    allSongs: [],
-    usedSongIds: new Set(),
-    revealResult: null,
-    opponentChoseChange: false,
-    robberyMessage: null,
-  }),
-}));
+      matchHistory: [],
+
+      setTeams: (teams) => set({ teams }),
+      setPhase: (phase) => set({ phase }),
+      setCurrentPlacement: (index) => set({ currentPlacementIndex: index }),
+      setOpponentPlacement: (index) => set({ opponentPlacementIndex: index }),
+      setTimeoutStealIndex: (index) => set({ timeoutStealIndex: index }),
+      setTimeLeft: (time) => set({ timeLeft: time }),
+      setTimerActive: (active) => set({ timerActive: active }),
+      decrementTime: () => set((s) => ({ timeLeft: Math.max(0, s.timeLeft - 1) })),
+      setAllSongs: (songs) => set({ allSongs: songs }),
+
+      // ─── TIMEOUT ───────────────────────────────────────────────
+      triggerTimeout: () => {
+        if (get().phase !== 'turn_active') return;
+        set({
+          phase: 'timeout_steal',
+          timerActive: true,
+          timeLeft: 30,
+          currentPlacementIndex: null,
+          timeoutStealIndex: null,
+        });
+      },
+
+      confirmTimeoutSteal: () => {
+        const { teams, currentTeamIndex, currentSong, timeoutStealIndex, matchHistory } = get();
+        if (!currentSong || timeoutStealIndex === null) return;
+
+        const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
+        const opponentTeam = teams[opponentIndex];
+        const updatedTeams = [...teams] as [Team, Team];
+
+        const correct = isCorrectPlacement(opponentTeam.timeline, currentSong, timeoutStealIndex);
+
+        if (correct) {
+          updatedTeams[opponentIndex] = {
+            ...opponentTeam,
+            timeline: insertSongSorted(opponentTeam.timeline, currentSong, timeoutStealIndex),
+            score: opponentTeam.score + 1,
+          };
+          const newPhase = checkWinner(updatedTeams) ?? 'reveal';
+          set({
+            teams: updatedTeams,
+            revealResult: 'opponent_correct',
+            phase: newPhase,
+            robberyMessage: `¡Tiempo agotado! ${opponentTeam.name} acertó y se lleva el punto.`,
+            ...(newPhase === 'winner' && {
+              matchHistory: [...matchHistory, buildHistoryEntry(updatedTeams)],
+            }),
+          });
+        } else {
+          set({
+            revealResult: 'both_wrong',
+            phase: 'reveal',
+            robberyMessage: `¡Tiempo agotado! ${opponentTeam.name} no acertó. Nadie gana el punto.`,
+          });
+        }
+      },
+
+      // ─── NORMAL TURN FLOW ──────────────────────────────────────
+      confirmTurn: () => set({ phase: 'opponent_response', timerActive: false }),
+
+      opponentConfirm: () => {
+        const { teams, currentTeamIndex, currentSong, currentPlacementIndex, matchHistory } = get();
+        if (!currentSong || currentPlacementIndex === null) return;
+
+        const currentTeam = teams[currentTeamIndex];
+        const correct = isCorrectPlacement(currentTeam.timeline, currentSong, currentPlacementIndex);
+        const updatedTeams = [...teams] as [Team, Team];
+
+        if (correct) {
+          updatedTeams[currentTeamIndex] = {
+            ...currentTeam,
+            timeline: insertSongSorted(currentTeam.timeline, currentSong, currentPlacementIndex),
+            score: currentTeam.score + 1,
+          };
+          const newPhase = checkWinner(updatedTeams) ?? 'reveal';
+          set({
+            teams: updatedTeams,
+            revealResult: 'team_correct',
+            phase: newPhase,
+            opponentChoseChange: false,
+            robberyMessage: null,
+            ...(newPhase === 'winner' && {
+              matchHistory: [...matchHistory, buildHistoryEntry(updatedTeams)],
+            }),
+          });
+        } else {
+          set({ revealResult: 'both_wrong', phase: 'reveal', opponentChoseChange: false, robberyMessage: null });
+        }
+      },
+
+      opponentChange: () => set({ phase: 'opponent_change', opponentChoseChange: true }),
+
+      confirmOpponentChange: () => {
+        const { teams, currentTeamIndex, currentSong, currentPlacementIndex, opponentPlacementIndex, matchHistory } = get();
+        if (!currentSong || currentPlacementIndex === null || opponentPlacementIndex === null) return;
+
+        const currentTeam = teams[currentTeamIndex];
+        const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
+        const opponentTeam = teams[opponentIndex];
+        const updatedTeams = [...teams] as [Team, Team];
+
+        const currentCorrect  = isCorrectPlacement(currentTeam.timeline, currentSong, currentPlacementIndex);
+        const opponentCorrect = isCorrectPlacement(currentTeam.timeline, currentSong, opponentPlacementIndex);
+
+        if (!currentCorrect && opponentCorrect) {
+          updatedTeams[opponentIndex] = {
+            ...opponentTeam,
+            timeline: insertSongSorted(opponentTeam.timeline, currentSong, opponentPlacementIndex),
+            score: opponentTeam.score + 1,
+            robberyTokens: Math.max(0, opponentTeam.robberyTokens - 1),
+          };
+          const newPhase = checkWinner(updatedTeams) ?? 'reveal';
+          set({
+            teams: updatedTeams,
+            revealResult: 'opponent_correct',
+            phase: newPhase,
+            robberyMessage: `${opponentTeam.name} robó la carta. ${updatedTeams[opponentIndex].robberyTokens} fichas restantes.`,
+            ...(newPhase === 'winner' && {
+              matchHistory: [...matchHistory, buildHistoryEntry(updatedTeams)],
+            }),
+          });
+          return;
+        }
+
+        if (currentCorrect) {
+          updatedTeams[currentTeamIndex] = {
+            ...currentTeam,
+            timeline: insertSongSorted(currentTeam.timeline, currentSong, currentPlacementIndex),
+            score: currentTeam.score + 1,
+          };
+          updatedTeams[opponentIndex] = {
+            ...opponentTeam,
+            robberyTokens: Math.max(0, opponentTeam.robberyTokens - 1),
+          };
+          const newPhase = checkWinner(updatedTeams) ?? 'reveal';
+          set({
+            teams: updatedTeams,
+            revealResult: 'team_correct',
+            phase: newPhase,
+            robberyMessage: `${opponentTeam.name} perdió una ficha de robo. ${updatedTeams[opponentIndex].robberyTokens} fichas restantes.`,
+            ...(newPhase === 'winner' && {
+              matchHistory: [...matchHistory, buildHistoryEntry(updatedTeams)],
+            }),
+          });
+          return;
+        }
+
+        // Both wrong
+        updatedTeams[opponentIndex] = {
+          ...opponentTeam,
+          robberyTokens: Math.max(0, opponentTeam.robberyTokens - 1),
+        };
+        set({
+          teams: updatedTeams,
+          revealResult: 'both_wrong',
+          phase: 'reveal',
+          robberyMessage: `${opponentTeam.name} perdió una ficha de robo. ${updatedTeams[opponentIndex].robberyTokens} fichas restantes.`,
+        });
+      },
+
+      // ─── NEXT TURN ─────────────────────────────────────────────
+      nextTurn: async () => {
+        if (get().phase === 'winner') return;
+
+        const { allSongs, usedSongIds, currentTeamIndex, teams } = get();
+
+        if (checkWinner(teams)) {
+          set({ phase: 'winner' });
+          return;
+        }
+
+        const available = allSongs.filter((s) => !usedSongIds.includes(s.id));
+        if (!available.length) return;
+
+        const baseSong = available[Math.floor(Math.random() * available.length)];
+        const updatedUsed = [...usedSongIds, baseSong.id];
+
+        let finalSong: Song = { ...baseSong };
+
+        try {
+          const enriched = await enrichSongWithItunes(baseSong.artist, baseSong.title);
+          if (enriched?.previewUrl) finalSong.previewUrl = enriched.previewUrl;
+        } catch {
+          // enrichment failure is non-fatal
+        }
+
+        set({
+          currentTeamIndex: currentTeamIndex === 0 ? 1 : 0,
+          currentSong: finalSong,
+          currentPlacementIndex: null,
+          opponentPlacementIndex: null,
+          timeoutStealIndex: null,
+          phase: 'turn_active',
+          timeLeft: 45,
+          timerActive: true,
+          revealResult: null,
+          opponentChoseChange: false,
+          robberyMessage: null,
+          usedSongIds: updatedUsed,
+        });
+      },
+
+      // resetGame preserves matchHistory
+      resetGame: () => set((state) => ({
+        teams: initialTeams,
+        currentTeamIndex: 0,
+        phase: 'setup',
+        currentSong: null,
+        currentPlacementIndex: null,
+        opponentPlacementIndex: null,
+        timeoutStealIndex: null,
+        timeLeft: 45,
+        timerActive: false,
+        allSongs: [],
+        usedSongIds: [],
+        revealResult: null,
+        opponentChoseChange: false,
+        robberyMessage: null,
+        // matchHistory intentionally preserved
+        matchHistory: state.matchHistory,
+      })),
+    }),
+    {
+      name: 'hitster-game-storage',
+      storage: createJSONStorage(() => localStorage),
+      // Exclude non-serializable runtime state from persistence
+      partialize: (state) => ({
+        teams:                 state.teams,
+        currentTeamIndex:      state.currentTeamIndex,
+        phase:                 state.phase,
+        currentSong:           state.currentSong,
+        currentPlacementIndex: state.currentPlacementIndex,
+        opponentPlacementIndex:state.opponentPlacementIndex,
+        timeoutStealIndex:     state.timeoutStealIndex,
+        timeLeft:              state.timeLeft,
+        timerActive:           state.timerActive,
+        allSongs:              state.allSongs,
+        usedSongIds:           state.usedSongIds,
+        revealResult:          state.revealResult,
+        opponentChoseChange:   state.opponentChoseChange,
+        robberyMessage:        state.robberyMessage,
+        matchHistory:          state.matchHistory,
+      }),
+    }
+  )
+);

@@ -7,6 +7,7 @@ import TeamScores from './TeamScores';
 import Waveform from './Waveform';
 import Timeline from './Timeline';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
+import AbandonButton from './AbandonButton';
 
 const COLOR_HEX: Record<TeamColor, string> = {
   rosa: '#e8197d',
@@ -43,6 +44,9 @@ export default function TimeoutStealScreen() {
     return () => clearInterval(t);
   }, [timeLeft, decrementTime, nextTurn]);
 
+  const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+  const secs = (timeLeft % 60).toString().padStart(2, '0');
+
   const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
   const opponentTeam = teams[opponentIndex];
   const bg = COLOR_HEX[opponentTeam.color];
@@ -60,6 +64,7 @@ export default function TimeoutStealScreen() {
       style={{
         minHeight: '100dvh',
         background: '#0d1117',
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         padding: '16px 20px',
@@ -69,39 +74,28 @@ export default function TimeoutStealScreen() {
       }}
     >
       {/* ── HEADER ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-        <div>
-          <p style={{
-            fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem',
-            letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6,
-          }}>
-            ROBO POR TIMEOUT:
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <AbandonButton />
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 4 }}>
+            ROBO POR TIMEOUT
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ background: bg, borderRadius: 6, padding: '4px 10px' }}>
-              <span style={{
-                fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem',
-                color: opponentTeam.color === 'amarillo' ? '#111' : 'white',
-              }}>
-                {opponentTeam.name}
-              </span>
-            </div>
-            {/* Timeout steals are FREE — no token shown */}
-            <span style={{ fontFamily: 'Figtree', fontSize: '0.72rem', color: '#8892a4' }}>
-              turno gratis
-            </span>
-          </div>
+              <div style={{ background: bg, borderRadius: 6, padding: '4px 10px' }}>
+                <span style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: opponentTeam.color === 'amarillo' ? '#111' : 'white' }}>
+                  {opponentTeam.name}
+                </span>
+              </div>
         </div>
-
         <div style={{ textAlign: 'right' }}>
-          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6 }}>
-            TIEMPO RESTANTE
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 4 }}>
+            TIEMPO
           </p>
-          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.4rem', color: timeLeft <= 10 ? '#ff4d4d' : 'white' }}>
-            00:{timeLeft.toString().padStart(2, '0')}
+          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.3rem', color: timeLeft <= 10 ? '#ff4d4d' : 'white' }}>
+            {mins}:{secs}
           </span>
         </div>
       </div>
+
 
       <TeamScores />
 

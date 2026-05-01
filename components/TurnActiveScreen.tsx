@@ -7,6 +7,7 @@ import TeamScores from './TeamScores';
 import Timeline from './Timeline';
 import Waveform from './Waveform';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
+import AbandonButton from './AbandonButton';
 
 const COLOR_HEX: Record<TeamColor, string> = {
   rosa: '#e8197d',
@@ -79,13 +80,13 @@ export default function TurnActiveScreen() {
       style={{
         minHeight: '100dvh',
         background: '#0d1117',
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         padding: '16px 20px',
         paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
         maxWidth: 430,
         margin: '0 auto',
-        position: 'relative',
       }}
     >
       {/* TIMEOUT BANNER — full-screen overlay for 3 seconds */}
@@ -160,29 +161,29 @@ export default function TurnActiveScreen() {
           </motion.div>
         )}
       </AnimatePresence>
-
       {/* ── HEADER ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-        <div>
-          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6 }}>
-            TURNO:
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <AbandonButton />
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 4 }}>
+            TURNO
           </p>
-          <div style={{ background: bg, borderRadius: 6, padding: '4px 10px', display: 'inline-block' }}>
+          <div style={{ background: bg, borderRadius: 6, padding: '4px 10px' }}>
             <span style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: currentTeam.color === 'amarillo' ? '#111' : 'white' }}>
               {currentTeam.name}
             </span>
           </div>
         </div>
-
         <div style={{ textAlign: 'right' }}>
-          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6 }}>
-            TIEMPO RESTANTE
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 4 }}>
+            TIEMPO
           </p>
-          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.4rem', color: timeLeft <= 20 ? '#ff4d4d' : 'white' }}>
+          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.3rem', color: timeLeft <= 20 ? '#ff4d4d' : 'white' }}>
             {mins}:{secs}
           </span>
         </div>
       </div>
+
 
       <TeamScores />
 

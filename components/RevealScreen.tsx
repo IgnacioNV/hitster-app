@@ -5,6 +5,7 @@ import { stopGlobalAudio } from '@/hooks/useMusicPlayer';
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/lib/store';
 import TeamScores from './TeamScores';
+import AbandonButton from './AbandonButton';
 
 export default function RevealScreen() {
   const {
@@ -14,12 +15,23 @@ export default function RevealScreen() {
     currentSong,
     teams,
     currentTeamIndex,
+    setPhase,
   } = useGameStore();
 
   if (!currentSong) return null;
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { stopGlobalAudio(); }, []);
+
+  // If a winner exists, redirect immediately (covers edge cases)
+  useEffect(() => {
+    if (teams[0].score >= 10 || teams[1].score >= 10) {
+      setPhase('winner');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teams]);
+
+  const gameWon = teams[0].score >= 10 || teams[1].score >= 10;
 
   const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
 
@@ -62,6 +74,7 @@ export default function RevealScreen() {
       style={{
         minHeight: '100dvh',
         background: '#07111d',
+        position: 'relative',
         padding: '24px 20px',
         maxWidth: 430,
         margin: '0 auto',
@@ -69,6 +82,10 @@ export default function RevealScreen() {
         flexDirection: 'column',
       }}
     >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <AbandonButton />
+        <div style={{ width: 80 }} />
+      </div>
       <TeamScores />
       <div
         style={{
@@ -179,13 +196,15 @@ export default function RevealScreen() {
           paddingTop: 32,
         }}
       >
-        <motion.button
-          whileTap={{ scale: 0.97 }}
-          className="btn-primary"
-          onClick={nextTurn}
-        >
-          SIGUIENTE TURNO
-        </motion.button>
+        {!gameWon && (
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            className="btn-primary"
+            onClick={nextTurn}
+          >
+            SIGUIENTE TURNO
+          </motion.button>
+        )}
       </div>
     </motion.div>
   );

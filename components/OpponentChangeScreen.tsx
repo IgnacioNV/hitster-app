@@ -6,6 +6,7 @@ import { useMusicPlayer } from '@/hooks/useMusicPlayer';
 import TeamScores from './TeamScores';
 import Waveform from './Waveform';
 import Timeline from './Timeline';
+import AbandonButton from './AbandonButton';
 
 const COLOR_HEX: Record<TeamColor, string> = {
   rosa: '#e8197d',
@@ -51,6 +52,7 @@ export default function OpponentChangeScreen() {
       style={{
         minHeight: '100dvh',
         background: '#0d1117',
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         padding: '16px 20px',
@@ -59,36 +61,34 @@ export default function OpponentChangeScreen() {
         margin: '0 auto',
       }}
     >
-      {/* HEADER */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-        <div>
-          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6 }}>
-            TURNO (robo):
+      {/* ── HEADER ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <AbandonButton />
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 4 }}>
+            TURNO (robo)
           </p>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ background: bg, borderRadius: 6, padding: '4px 10px' }}>
-              <span style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: opponentTeam.color === 'amarillo' ? '#1a1a1a' : 'white' }}>
-                {opponentTeam.name}
-              </span>
-            </div>
-            <div style={{ background: bg, borderRadius: '50%', width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '0.85rem', color: opponentTeam.color === 'amarillo' ? '#1a1a1a' : 'white' }}>
-                {opponentTeam.robberyTokens}
-              </span>
-            </div>
-            <span style={{ fontFamily: 'Figtree', fontSize: '0.75rem', color: '#8892a4' }}>Fichas de robo</span>
-          </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                <div style={{ background: bg, borderRadius: 6, padding: '4px 10px' }}>
+                  <span style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: opponentTeam.color === 'amarillo' ? '#111' : 'white' }}>
+                    {opponentTeam.name}
+                  </span>
+                </div>
+                <span style={{ fontFamily: 'Figtree', fontSize: '0.72rem', color: '#8892a4' }}>
+                  {opponentTeam.robberyTokens} fichas
+                </span>
+              </div>
         </div>
-
         <div style={{ textAlign: 'right' }}>
-          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 6 }}>
-            TIEMPO RESTANTE
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 4 }}>
+            TIEMPO
           </p>
-          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.4rem', color: 'white' }}>
+          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.3rem', color: timeLeft <= 10 ? '#ff4d4d' : 'white' }}>
             {mins}:{secs}
           </span>
         </div>
       </div>
+
 
       <TeamScores />
 
