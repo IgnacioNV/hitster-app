@@ -1,17 +1,21 @@
 'use client';
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/lib/store';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { startQuickGame, matchHistory, phase } = useGameStore();
+  const { setPhase, matchHistory, phase } = useGameStore();
+  const [selectedMode, setSelectedMode] = useState<'offline' | null>(null);
 
   const gameInProgress = phase !== 'setup' && phase !== 'winner';
 
-  const handleQuickPlay = async () => {
-    await startQuickGame();
+  const handlePlay = () => {
+    if (!selectedMode) return;
+    // Go to SetupScreen (phase = 'setup' is already the state, just navigate there)
+    setPhase('setup');
   };
 
   return (
@@ -55,7 +59,7 @@ export default function HomeScreen() {
       {/* JUGAR AHORA — primary CTA */}
       <motion.button
         whileTap={{ scale: 0.97 }}
-        onClick={handleQuickPlay}
+        onClick={handlePlay}
         style={{
           background: 'linear-gradient(135deg, #e8197d, #c4105f)',
           border: 'none',
@@ -101,7 +105,7 @@ export default function HomeScreen() {
           color: 'rgba(255,255,255,0.6)',
           marginTop: 6,
         }}>
-          Modo offline · Configuración por defecto
+          {selectedMode ? 'Modo offline seleccionado ✓' : 'Seleccioná un modo primero'}
         </p>
       </motion.button>
 
@@ -158,7 +162,7 @@ export default function HomeScreen() {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
         {[
-          { label: 'Modo Offline', icon: '🎮', desc: 'Local, sin conexión', active: true, onClick: handleQuickPlay },
+          { label: 'Modo Offline', icon: '🎮', desc: 'Local, sin conexión', active: true, onClick: () => setSelectedMode('offline') },
           { label: 'Jugar Online',  icon: '🌐', desc: 'Próximamente', active: false, onClick: null },
           { label: 'Modo Asincrónico', icon: '⏳', desc: 'Próximamente', active: false, onClick: null },
         ].map((mode) => (
@@ -167,8 +171,8 @@ export default function HomeScreen() {
             whileTap={mode.active ? { scale: 0.98 } : {}}
             onClick={mode.active && mode.onClick ? mode.onClick : undefined}
             style={{
-              background: '#161b27',
-              border: `1.5px solid ${mode.active ? '#2a3347' : '#1a2035'}`,
+              background: (mode.label === 'Modo Offline' && selectedMode === 'offline') ? 'rgba(232,25,125,0.08)' : '#161b27',
+              border: `1.5px solid ${(mode.label === 'Modo Offline' && selectedMode === 'offline') ? '#e8197d' : mode.active ? '#2a3347' : '#1a2035'}`,
               borderRadius: 14,
               padding: '14px 18px',
               cursor: mode.active ? 'pointer' : 'not-allowed',
@@ -177,6 +181,7 @@ export default function HomeScreen() {
               gap: 14,
               opacity: mode.active ? 1 : 0.45,
               textAlign: 'left',
+              transition: 'all 0.15s',
             }}
           >
             <span style={{ fontSize: '1.4rem' }}>{mode.icon}</span>

@@ -20,7 +20,7 @@ const DIFFICULTIES: { id: GameDifficulty; label: string; desc: string }[] = [
 
 export default function CustomizeScreen() {
   const router = useRouter();
-  const { startCustomGame } = useGameStore();
+  const { startCustomGame, setPhase } = useGameStore();
 
   const [playlist, setPlaylist]     = useState<GamePlaylist>('default');
   const [difficulty, setDifficulty] = useState<GameDifficulty>('normal');

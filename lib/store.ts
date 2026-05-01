@@ -22,6 +22,7 @@ export interface Team {
 }
 
 export type GamePhase =
+  | 'home'
   | 'setup'
   | 'turn_active'
   | 'timeout_steal'
@@ -146,7 +147,7 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
       teams: initialTeams,
       currentTeamIndex: 0,
-      phase: 'setup',
+      phase: 'home',
 
       currentSong: null,
       currentPlacementIndex: null,
@@ -372,6 +373,11 @@ export const useGameStore = create<GameState>()(
       },
 
       startQuickGame: async () => {
+        // Navigate to SetupScreen for team name/color config
+        set({ phase: 'setup' });
+      },
+
+      _startGameWithDefaults: async () => {
         const { setTeams, setAllSongs, nextTurn } = get();
         const usedIds = new Set<string>();
         const available = [...songs];
@@ -400,7 +406,7 @@ export const useGameStore = create<GameState>()(
       resetGame: () => set((state) => ({
         teams: initialTeams,
         currentTeamIndex: 0,
-        phase: 'setup',
+        phase: 'home',
         currentSong: null,
         currentPlacementIndex: null,
         opponentPlacementIndex: null,
