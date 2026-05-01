@@ -22,7 +22,7 @@ export interface Team {
 export type GamePhase =
   | 'setup'
   | 'turn_active'
-  | 'timeout_steal'    // NEW: rival gets free steal after timeout
+  | 'timeout_steal'
   | 'opponent_response'
   | 'opponent_change'
   | 'reveal'
@@ -53,8 +53,7 @@ interface GameState {
   opponentChoseChange: boolean;
   robberyMessage: string | null;
 
-  // timeout_steal state
-  timeoutStealIndex: number | null; // where the rival placed during timeout steal
+  timeoutStealIndex: number | null;
 
   setTeams: (teams: [Team, Team]) => void;
   setPhase: (phase: GamePhase) => void;
@@ -66,8 +65,8 @@ interface GameState {
   decrementTime: () => void;
   setAllSongs: (songs: Song[]) => void;
 
-  triggerTimeout: () => void;         // called when timeLeft hits 0
-  confirmTimeoutSteal: () => void;    // rival confirms placement in timeout_steal phase
+  triggerTimeout: () => void;
+  confirmTimeoutSteal: () => void;
 
   confirmTurn: () => void;
   opponentConfirm: () => void;
@@ -78,10 +77,13 @@ interface GameState {
   resetGame: () => void;
 }
 
+// TEMP: testing winner flow
 const initialTeams: [Team, Team] = [
-  { name: 'Equipo 1', color: 'rosa',   timeline: [], robberyTokens: 4, score: 0 },
-  { name: 'Equipo 2', color: 'celeste', timeline: [], robberyTokens: 4, score: 0 },
+  { name: 'Equipo 1', color: 'rosa',    timeline: [], robberyTokens: 4, score: 8 },
+  { name: 'Equipo 2', color: 'celeste', timeline: [], robberyTokens: 4, score: 8 },
 ];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
 
 function isCorrectPlacement(timeline: Song[], song: Song, index: number): boolean {
   const test = [...timeline];
@@ -97,6 +99,14 @@ function insertSongSorted(timeline: Song[], song: Song, index: number): Song[] {
   updated.splice(index, 0, song);
   return updated.sort((a, b) => a.year - b.year);
 }
+
+// Centralized winner check — returns 'winner' if any team has reached 10, else null.
+function checkWinner(teams: [Team, Team]): GamePhase | null {
+  if (teams[0].score >= 10 || teams[1].score >= 10) return 'winner';
+  return null;
+}
+
+// ─── STORE ───────────────────────────────────────────────────────────────────
 
 export const useGameStore = create<GameState>((set, get) => ({
   teams: initialTeams,
@@ -128,23 +138,18 @@ export const useGameStore = create<GameState>((set, get) => ({
   decrementTime: () => set((s) => ({ timeLeft: Math.max(0, s.timeLeft - 1) })),
   setAllSongs: (songs) => set({ allSongs: songs }),
 
-  // ─── TIMEOUT ────────────────────────────────────────────────
-  // Called when timeLeft hits 0 in TurnActiveScreen.
-  // Transitions to timeout_steal — the rival now gets a free attempt
-  // on their OWN timeline. No robbery tokens spent.
+  // ─── TIMEOUT ─────────────────────────────────────────────────
   triggerTimeout: () => {
-    // Guard: only trigger once
     if (get().phase !== 'turn_active') return;
     set({
       phase: 'timeout_steal',
       timerActive: true,
-      timeLeft: 30,                 // rival has 30s to steal
+      timeLeft: 30,
       currentPlacementIndex: null,
       timeoutStealIndex: null,
     });
   },
 
-  // Rival confirms their placement during timeout_steal
   confirmTimeoutSteal: () => {
     const { teams, currentTeamIndex, currentSong, timeoutStealIndex } = get();
     if (!currentSong || timeoutStealIndex === null) return;
@@ -160,16 +165,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         ...opponentTeam,
         timeline: insertSongSorted(opponentTeam.timeline, currentSong, timeoutStealIndex),
         score: opponentTeam.score + 1,
-        // NO robbery token spent — this is a free timeout steal
       };
       set({
         teams: updatedTeams,
         revealResult: 'opponent_correct',
-        phase: 'reveal',
+        phase: checkWinner(updatedTeams) ?? 'reveal',
         robberyMessage: `¡Tiempo agotado! ${opponentTeam.name} acertó y se lleva el punto.`,
       });
     } else {
-      // Both wrong — nobody gets the point, no card added
       set({
         revealResult: 'both_wrong',
         phase: 'reveal',
@@ -195,7 +198,13 @@ export const useGameStore = create<GameState>((set, get) => ({
         timeline: insertSongSorted(currentTeam.timeline, currentSong, currentPlacementIndex),
         score: currentTeam.score + 1,
       };
-      set({ teams: updatedTeams, revealResult: 'team_correct', phase: 'reveal', opponentChoseChange: false, robberyMessage: null });
+      set({
+        teams: updatedTeams,
+        revealResult: 'team_correct',
+        phase: checkWinner(updatedTeams) ?? 'reveal',
+        opponentChoseChange: false,
+        robberyMessage: null,
+      });
     } else {
       set({ revealResult: 'both_wrong', phase: 'reveal', opponentChoseChange: false, robberyMessage: null });
     }
@@ -216,7 +225,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     const opponentCorrect = isCorrectPlacement(currentTeam.timeline, currentSong, opponentPlacementIndex);
 
     if (!currentCorrect && opponentCorrect) {
-      // Successful robbery
       updatedTeams[opponentIndex] = {
         ...opponentTeam,
         timeline: insertSongSorted(opponentTeam.timeline, currentSong, opponentPlacementIndex),
@@ -226,14 +234,13 @@ export const useGameStore = create<GameState>((set, get) => ({
       set({
         teams: updatedTeams,
         revealResult: 'opponent_correct',
-        phase: 'reveal',
+        phase: checkWinner(updatedTeams) ?? 'reveal',
         robberyMessage: `${opponentTeam.name} robó la carta. ${updatedTeams[opponentIndex].robberyTokens} fichas restantes.`,
       });
       return;
     }
 
     if (currentCorrect) {
-      // Original team was right, rival wasted a token
       updatedTeams[currentTeamIndex] = {
         ...currentTeam,
         timeline: insertSongSorted(currentTeam.timeline, currentSong, currentPlacementIndex),
@@ -246,7 +253,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       set({
         teams: updatedTeams,
         revealResult: 'team_correct',
-        phase: 'reveal',
+        phase: checkWinner(updatedTeams) ?? 'reveal',
         robberyMessage: `${opponentTeam.name} perdió una ficha de robo. ${updatedTeams[opponentIndex].robberyTokens} fichas restantes.`,
       });
       return;
@@ -267,11 +274,13 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   // ─── NEXT TURN ───────────────────────────────────────────────
   nextTurn: async () => {
-    const { allSongs, usedSongIds, currentTeamIndex } = get();
+    // Guard: never advance if game is already won
+    if (get().phase === 'winner') return;
 
-    // Check winner first
-    const { teams } = get();
-    if (teams[0].score >= 10 || teams[1].score >= 10) {
+    const { allSongs, usedSongIds, currentTeamIndex, teams } = get();
+
+    // Double-check winner (covers edge case where reveal didn't redirect)
+    if (checkWinner(teams)) {
       set({ phase: 'winner' });
       return;
     }
