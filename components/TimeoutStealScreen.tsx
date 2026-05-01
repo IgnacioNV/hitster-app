@@ -29,20 +29,28 @@ export default function TimeoutStealScreen() {
     nextTurn,
   } = useGameStore();
 
+  const nextTeamName = teams[currentTeamIndex].name; // original team gets turn back
+
   const expiredRef = useRef(false);
 
-  // 30s countdown — if it hits 0, card is lost and next normal turn starts
+  // 30s countdown — if it hits 0, show "punto perdido" screen then next turn
   useEffect(() => {
     if (timeLeft <= 0) {
       if (!expiredRef.current) {
         expiredRef.current = true;
-        nextTurn();
+        // Both teams ran out of time — show reveal with both_wrong and context message
+        useGameStore.setState({
+          revealResult: 'both_wrong',
+          robberyMessage: `Punto perdido. Turno de ${nextTeamName}.`,
+          phase: 'reveal',
+          timerActive: false,
+        });
       }
       return;
     }
     const t = setInterval(() => decrementTime(), 1000);
     return () => clearInterval(t);
-  }, [timeLeft, decrementTime, nextTurn]);
+  }, [timeLeft, decrementTime, nextTeamName]);
 
   const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
   const secs = (timeLeft % 60).toString().padStart(2, '0');

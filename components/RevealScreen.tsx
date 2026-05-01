@@ -17,6 +17,8 @@ export default function RevealScreen() {
     setPhase,
   } = useGameStore();
 
+  const isDoubleTimeout = robberyMessage?.startsWith('Punto perdido');
+
   if (!currentSong) return null;
 
   const resultRef = useRef(revealResult);
@@ -174,9 +176,11 @@ export default function RevealScreen() {
         {!gameWon && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
             <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '0.82rem', color: '#6b7a99', textAlign: 'center', lineHeight: 1.6 }}>
-              {frozenResult === 'opponent_correct'
-                ? 'El turno siguiente es tuyo — robaste la carta.'
-                : 'El turno siguiente es del otro equipo.'}
+              {isDoubleTimeout
+                ? robberyMessage
+                : frozenResult === 'opponent_correct'
+                  ? 'El turno siguiente es tuyo — robaste la carta.'
+                  : 'El turno siguiente es del otro equipo.'}
             </p>
             <div style={{
               width: '100%',
