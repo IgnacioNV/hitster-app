@@ -87,7 +87,6 @@ export default function TurnActiveScreen() {
         paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
         maxWidth: 430,
         margin: '0 auto',
-        position: 'relative',
       }}
     >
       {/* TIMEOUT BANNER — full-screen overlay for 3 seconds */}
