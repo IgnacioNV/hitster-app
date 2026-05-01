@@ -1,7 +1,7 @@
 'use client';
 import { AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/lib/store';
-import SetupScreen from '@/components/SetupScreen';
+import HomeScreen from '@/components/HomeScreen';
 import TurnActiveScreen from '@/components/TurnActiveScreen';
 import TimeoutStealScreen from '@/components/TimeoutStealScreen';
 import OpponentResponseScreen from '@/components/OpponentResponseScreen';
@@ -15,7 +15,7 @@ export default function Home() {
   return (
     <main style={{ background: '#0d1117', minHeight: '100dvh' }}>
       <AnimatePresence mode="wait">
-        {phase === 'setup'             && <SetupScreen            key="setup" />}
+        {phase === 'setup'             && <HomeScreen             key="setup" />}
         {phase === 'turn_active'       && <TurnActiveScreen       key="turn_active" />}
         {phase === 'timeout_steal'     && <TimeoutStealScreen     key="timeout_steal" />}
         {phase === 'opponent_response' && <OpponentResponseScreen key="opponent_response" />}
