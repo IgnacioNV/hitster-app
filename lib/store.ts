@@ -173,6 +173,7 @@ export const useGameStore = create<GameState>()(
       },
 
       confirmTimeoutSteal: () => {
+        if (get().phase === 'reveal' || get().phase === 'winner') return; // guard: prevent double execution
         const { teams, currentTeamIndex, currentSong, timeoutStealIndex, matchHistory } = get();
         if (!currentSong || timeoutStealIndex === null) return;
 
@@ -211,6 +212,7 @@ export const useGameStore = create<GameState>()(
       confirmTurn: () => set({ phase: 'opponent_response', timerActive: false }),
 
       opponentConfirm: () => {
+        if (get().phase === 'reveal' || get().phase === 'winner') return; // guard: prevent double execution
         const { teams, currentTeamIndex, currentSong, currentPlacementIndex, matchHistory } = get();
         if (!currentSong || currentPlacementIndex === null) return;
 
@@ -243,6 +245,7 @@ export const useGameStore = create<GameState>()(
       opponentChange: () => set({ phase: 'opponent_change', opponentChoseChange: true }),
 
       confirmOpponentChange: () => {
+        if (get().phase === 'reveal' || get().phase === 'winner') return; // guard: prevent double execution
         const { teams, currentTeamIndex, currentSong, currentPlacementIndex, opponentPlacementIndex, matchHistory } = get();
         if (!currentSong || currentPlacementIndex === null || opponentPlacementIndex === null) return;
 
