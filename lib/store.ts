@@ -1,3 +1,4 @@
+import { songs } from '@/lib/songs';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { enrichSongWithItunes } from '@/lib/itunes';
@@ -21,6 +22,7 @@ export interface Team {
 }
 
 export type GamePhase =
+  | 'home'
   | 'setup'
   | 'turn_active'
   | 'timeout_steal'
@@ -40,6 +42,17 @@ export interface MatchHistory {
   date: number;
   teams: [Team, Team];
   winner: string;
+}
+
+export type GameMode = 'offline' | 'online';
+export type GameDifficulty = 'easy' | 'normal' | 'hard';
+export type GamePlaylist = 'default' | 'rock' | 'pop' | 'ai';
+
+export interface GameConfig {
+  mode: GameMode;
+  difficulty: GameDifficulty;
+  playlist: GamePlaylist;
+  aiPrompt?: string;
 }
 
 interface GameState {
@@ -64,6 +77,7 @@ interface GameState {
   timeoutStealIndex: number | null;
 
   matchHistory: MatchHistory[];
+  gameConfig: GameConfig;
 
   setTeams: (teams: [Team, Team]) => void;
   setPhase: (phase: GamePhase) => void;
@@ -85,6 +99,8 @@ interface GameState {
 
   nextTurn: () => Promise<void>;
   resetGame: () => void;
+  startQuickGame: () => Promise<void>;
+  startCustomGame: (config: GameConfig) => Promise<void>;
 }
 
 // TEMP: testing winner flow
@@ -131,7 +147,7 @@ export const useGameStore = create<GameState>()(
     (set, get) => ({
       teams: initialTeams,
       currentTeamIndex: 0,
-      phase: 'setup',
+      phase: 'home',
 
       currentSong: null,
       currentPlacementIndex: null,
@@ -149,6 +165,7 @@ export const useGameStore = create<GameState>()(
       robberyMessage: null,
 
       matchHistory: [],
+      gameConfig: { mode: 'offline', difficulty: 'normal', playlist: 'default' },
 
       setTeams: (teams) => set({ teams }),
       setPhase: (phase) => set({ phase }),
@@ -173,6 +190,7 @@ export const useGameStore = create<GameState>()(
       },
 
       confirmTimeoutSteal: () => {
+        if (get().phase === 'reveal' || get().phase === 'winner') return; // guard: prevent double execution
         const { teams, currentTeamIndex, currentSong, timeoutStealIndex, matchHistory } = get();
         if (!currentSong || timeoutStealIndex === null) return;
 
@@ -211,6 +229,7 @@ export const useGameStore = create<GameState>()(
       confirmTurn: () => set({ phase: 'opponent_response', timerActive: false }),
 
       opponentConfirm: () => {
+        if (get().phase === 'reveal' || get().phase === 'winner') return; // guard: prevent double execution
         const { teams, currentTeamIndex, currentSong, currentPlacementIndex, matchHistory } = get();
         if (!currentSong || currentPlacementIndex === null) return;
 
@@ -243,6 +262,7 @@ export const useGameStore = create<GameState>()(
       opponentChange: () => set({ phase: 'opponent_change', opponentChoseChange: true }),
 
       confirmOpponentChange: () => {
+        if (get().phase === 'reveal' || get().phase === 'winner') return; // guard: prevent double execution
         const { teams, currentTeamIndex, currentSong, currentPlacementIndex, opponentPlacementIndex, matchHistory } = get();
         if (!currentSong || currentPlacementIndex === null || opponentPlacementIndex === null) return;
 
@@ -352,11 +372,41 @@ export const useGameStore = create<GameState>()(
         });
       },
 
+      startQuickGame: async () => {
+        // Navigate to SetupScreen for team name/color config
+        set({ phase: 'setup' });
+      },
+
+      _startGameWithDefaults: async () => {
+        const { setTeams, setAllSongs, nextTurn } = get();
+        const usedIds = new Set<string>();
+        const available = [...songs];
+        const pick = () => {
+          const s = available.filter(x => !usedIds.has(x.id));
+          const chosen = s[Math.floor(Math.random() * s.length)];
+          if (chosen) usedIds.add(chosen.id);
+          return chosen ?? null;
+        };
+        const t1song = pick();
+        const t2song = pick();
+        setTeams([
+          { name: 'Equipo 1', color: 'rosa',    timeline: t1song ? [t1song] : [], robberyTokens: 4, score: 0 },
+          { name: 'Equipo 2', color: 'celeste', timeline: t2song ? [t2song] : [], robberyTokens: 4, score: 0 },
+        ]);
+        setAllSongs(available.filter(s => !usedIds.has(s.id)));
+        await nextTurn();
+      },
+
+      startCustomGame: async (config: GameConfig) => {
+        set({ gameConfig: config });
+        await get().startQuickGame();
+      },
+
       // resetGame preserves matchHistory
       resetGame: () => set((state) => ({
         teams: initialTeams,
         currentTeamIndex: 0,
-        phase: 'setup',
+        phase: 'home',
         currentSong: null,
         currentPlacementIndex: null,
         opponentPlacementIndex: null,
@@ -368,6 +418,7 @@ export const useGameStore = create<GameState>()(
         revealResult: null,
         opponentChoseChange: false,
         robberyMessage: null,
+        gameConfig: { mode: 'offline', difficulty: 'normal', playlist: 'default' },
         // matchHistory intentionally preserved
         matchHistory: state.matchHistory,
       })),
