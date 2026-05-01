@@ -44,6 +44,9 @@ export default function TimeoutStealScreen() {
     return () => clearInterval(t);
   }, [timeLeft, decrementTime, nextTurn]);
 
+  const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+  const secs = (timeLeft % 60).toString().padStart(2, '0');
+
   const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
   const opponentTeam = teams[opponentIndex];
   const bg = COLOR_HEX[opponentTeam.color];
