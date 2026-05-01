@@ -35,18 +35,15 @@ export default function RevealScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once on mount — scores won't change during reveal
 
-  // Auto-advance after correct answers (no button needed)
+  // Auto-advance after every result
   useEffect(() => {
-    if (resultRef.current === 'team_correct' || resultRef.current === 'opponent_correct') {
-      const t = setTimeout(() => nextTurn(), 3000);
-      return () => clearTimeout(t);
-    }
+    const t = setTimeout(() => nextTurn(), 3000);
+    return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once — result is stable from mount
 
-  // Live countdown display for correct results
+  // Live countdown display for all results
   useEffect(() => {
-    if (!(resultRef.current === 'team_correct' || resultRef.current === 'opponent_correct')) return;
     if (gameWon) return;
     const interval = setInterval(() => {
       setCountdown((n) => (n > 1 ? n - 1 : 1));
@@ -174,7 +171,7 @@ export default function RevealScreen() {
 
       {/* BOTÓN / COUNTDOWN */}
       <div style={{ marginTop: 'auto', paddingTop: 32 }}>
-        {!gameWon && isCorrect && (
+        {!gameWon && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
             <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '0.82rem', color: '#6b7a99', textAlign: 'center', lineHeight: 1.6 }}>
               {frozenResult === 'opponent_correct'
@@ -195,15 +192,7 @@ export default function RevealScreen() {
             </div>
           </div>
         )}
-        {!gameWon && !isCorrect && (
-          <motion.button
-            whileTap={{ scale: 0.97 }}
-            className="btn-primary"
-            onClick={nextTurn}
-          >
-            SIGUIENTE TURNO
-          </motion.button>
-        )}
+
       </div>
     </motion.div>
   );
