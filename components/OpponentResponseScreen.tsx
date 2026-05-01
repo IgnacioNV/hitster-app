@@ -75,117 +75,34 @@ export default function OpponentResponseScreen() {
         margin: '0 auto',
       }}
     >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: 16,
-        }}
-      >
-        <div>
-          <p
-            style={{
-              fontFamily: 'Figtree',
-              fontWeight: 700,
-              fontSize: '0.7rem',
-              color: '#8892a4',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              marginBottom: 6,
-            }}
-          >
-            TURNO (ROBO)
+      {/* ── HEADER ── */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <AbandonButton />
+        <div style={{ textAlign: 'center' }}>
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 4 }}>
+            TURNO (robo)
           </p>
-
-          <div
-            style={{
-              display: 'flex',
-              gap: 8,
-              alignItems: 'center',
-            }}
-          >
-            <div
-              style={{
-                background: bg,
-                borderRadius: 8,
-                padding: '4px 10px',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'Figtree',
-                  fontWeight: 700,
-                  fontSize: '0.85rem',
-                  color:
-                    opponentTeam.color ===
-                    'amarillo'
-                      ? '#111'
-                      : 'white',
-                }}
-              >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+            <div style={{ background: bg, borderRadius: 6, padding: '4px 10px' }}>
+              <span style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: opponentTeam.color === 'amarillo' ? '#111' : 'white' }}>
                 {opponentTeam.name}
               </span>
             </div>
-
-            <div
-              style={{
-                background: bg,
-                width: 28,
-                height: 28,
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <span
-                style={{
-                  fontFamily: 'Figtree',
-                  fontWeight: 800,
-                  fontSize: '0.8rem',
-                  color:
-                    opponentTeam.color ===
-                    'amarillo'
-                      ? '#111'
-                      : 'white',
-                }}
-              >
-                {opponentTeam.robberyTokens}
-              </span>
-            </div>
+            <span style={{ fontFamily: 'Figtree', fontSize: '0.72rem', color: '#8892a4' }}>
+              {opponentTeam.robberyTokens} fichas
+            </span>
           </div>
         </div>
-
         <div style={{ textAlign: 'right' }}>
-          <p
-            style={{
-              fontFamily: 'Figtree',
-              fontWeight: 700,
-              fontSize: '0.7rem',
-              color: '#8892a4',
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              marginBottom: 6,
-            }}
-          >
+          <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 4 }}>
             TIEMPO
           </p>
-
-          <span
-            style={{
-              fontFamily: 'Figtree',
-              fontWeight: 800,
-              fontSize: '1.4rem',
-              color: 'white',
-            }}
-          >
+          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.3rem', color: 'white' }}>
             {mins}:{secs}
           </span>
         </div>
       </div>
 
-      <AbandonButton />
       <TeamScores />
 
       {/* Preview */}

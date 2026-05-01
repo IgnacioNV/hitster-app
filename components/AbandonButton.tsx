@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from '@/lib/store';
 import { stopGlobalAudio } from '@/hooks/useMusicPlayer';
 
+// Inline variant — used inside the header row
 export default function AbandonButton() {
   const [showModal, setShowModal] = useState(false);
   const { resetGame } = useGameStore();
@@ -17,28 +18,23 @@ export default function AbandonButton() {
 
   return (
     <>
-      {/* Trigger — top-right corner */}
       <button
         onClick={() => setShowModal(true)}
         style={{
-          position: 'absolute',
-          top: 16,
-          right: 20,
           background: 'transparent',
           border: '1.5px solid #2a3347',
           borderRadius: 8,
-          padding: '5px 10px',
+          padding: '6px 10px',
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
           gap: 5,
-          zIndex: 10,
         }}
       >
-        <span style={{ fontSize: '0.9rem' }}>✕</span>
+        <span style={{ fontSize: '0.85rem', lineHeight: 1 }}>✕</span>
         <span style={{
           fontFamily: 'Figtree, sans-serif',
-          fontSize: '0.7rem',
+          fontSize: '0.65rem',
           fontWeight: 600,
           color: '#8892a4',
           letterSpacing: '0.05em',
@@ -48,7 +44,6 @@ export default function AbandonButton() {
         </span>
       </button>
 
-      {/* Confirmation modal */}
       <AnimatePresence>
         {showModal && (
           <motion.div
@@ -86,65 +81,25 @@ export default function AbandonButton() {
               }}
             >
               <div style={{ fontSize: '2.5rem', marginBottom: 16 }}>🏳️</div>
-
-              <h2 style={{
-                fontFamily: 'Figtree, sans-serif',
-                fontWeight: 900,
-                fontSize: '1.3rem',
-                color: 'white',
-                marginBottom: 10,
-              }}>
+              <h2 style={{ fontFamily: 'Figtree, sans-serif', fontWeight: 900, fontSize: '1.3rem', color: 'white', marginBottom: 10 }}>
                 ¿Abandonar la partida?
               </h2>
-
-              <p style={{
-                fontFamily: 'Figtree, sans-serif',
-                fontSize: '0.85rem',
-                color: '#8892a4',
-                lineHeight: 1.5,
-                marginBottom: 28,
-              }}>
+              <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '0.85rem', color: '#8892a4', lineHeight: 1.5, marginBottom: 28 }}>
                 Se perderá el progreso del turno actual. El historial de partidas anteriores se mantiene.
               </p>
-
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={handleConfirm}
-                  style={{
-                    background: '#ef4444',
-                    border: 'none',
-                    borderRadius: 9999,
-                    padding: '13px',
-                    fontFamily: 'Figtree, sans-serif',
-                    fontWeight: 800,
-                    fontSize: '0.85rem',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    color: 'white',
-                    cursor: 'pointer',
-                  }}
-                >
+                <motion.button whileTap={{ scale: 0.97 }} onClick={handleConfirm} style={{
+                  background: '#ef4444', border: 'none', borderRadius: 9999, padding: '13px',
+                  fontFamily: 'Figtree, sans-serif', fontWeight: 800, fontSize: '0.85rem',
+                  letterSpacing: '0.08em', textTransform: 'uppercase', color: 'white', cursor: 'pointer',
+                }}>
                   Sí, abandonar
                 </motion.button>
-
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setShowModal(false)}
-                  style={{
-                    background: 'transparent',
-                    border: '1.5px solid #2a3347',
-                    borderRadius: 9999,
-                    padding: '13px',
-                    fontFamily: 'Figtree, sans-serif',
-                    fontWeight: 700,
-                    fontSize: '0.85rem',
-                    letterSpacing: '0.08em',
-                    textTransform: 'uppercase',
-                    color: '#8892a4',
-                    cursor: 'pointer',
-                  }}
-                >
+                <motion.button whileTap={{ scale: 0.97 }} onClick={() => setShowModal(false)} style={{
+                  background: 'transparent', border: '1.5px solid #2a3347', borderRadius: 9999, padding: '13px',
+                  fontFamily: 'Figtree, sans-serif', fontWeight: 700, fontSize: '0.85rem',
+                  letterSpacing: '0.08em', textTransform: 'uppercase', color: '#8892a4', cursor: 'pointer',
+                }}>
                   Seguir jugando
                 </motion.button>
               </div>

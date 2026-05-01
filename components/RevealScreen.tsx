@@ -82,7 +82,10 @@ export default function RevealScreen() {
         flexDirection: 'column',
       }}
     >
-      <AbandonButton />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+        <AbandonButton />
+        <div style={{ width: 80 }} />
+      </div>
       <TeamScores />
 
       {/* CARD DE LA CANCIÓN */}
