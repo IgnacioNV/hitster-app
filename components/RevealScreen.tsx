@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { stopGlobalAudio } from '@/hooks/useMusicPlayer';
 import { motion } from 'framer-motion';
 import { useGameStore } from '@/lib/store';
@@ -19,7 +19,8 @@ export default function RevealScreen() {
 
   if (!currentSong) return null;
 
-  const resultRef = useRef(revealResult); // freeze result at mount — never changes mid-reveal
+  const resultRef = useRef(revealResult);
+  const [countdown, setCountdown] = useState(3); // freeze result at mount — never changes mid-reveal
 
   // Stop audio once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -42,6 +43,17 @@ export default function RevealScreen() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once — result is stable from mount
+
+  // Live countdown display for correct results
+  useEffect(() => {
+    if (!(resultRef.current === 'team_correct' || resultRef.current === 'opponent_correct')) return;
+    if (gameWon) return;
+    const interval = setInterval(() => {
+      setCountdown((n) => (n > 1 ? n - 1 : 1));
+    }, 1000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const gameWon = teams[0].score >= 10 || teams[1].score >= 10;
   const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
@@ -158,9 +170,27 @@ export default function RevealScreen() {
           </p>
         )}
         {isCorrect && !gameWon && (
-          <p style={{ marginTop: 14, textAlign: 'center', fontSize: '0.8rem', color: '#4a5568' }}>
-            Siguiente turno en 2 segundos...
-          </p>
+          <div style={{ marginTop: 18, textAlign: 'center' }}>
+            <p style={{ fontSize: '0.82rem', color: '#6b7a99', lineHeight: 1.6, marginBottom: 10 }}>
+              {frozenResult === 'opponent_correct'
+                ? 'El turno siguiente es tuyo — robaste la carta.'
+                : 'El turno siguiente es del otro equipo.'}
+            </p>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              background: '#0f1a2e',
+              border: '1px solid #1e2d45',
+              borderRadius: 9999,
+              padding: '6px 16px',
+            }}>
+              <span style={{ fontSize: '1rem' }}>⏱</span>
+              <span style={{ fontFamily: 'Figtree, sans-serif', fontWeight: 700, fontSize: '0.85rem', color: '#8f9bb3' }}>
+                Nueva ronda en {countdown}...
+              </span>
+            </div>
+          </div>
         )}
       </div>
 
