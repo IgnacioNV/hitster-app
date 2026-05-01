@@ -38,7 +38,7 @@ export default function RevealScreen() {
   // Auto-advance after correct answers (no button needed)
   useEffect(() => {
     if (resultRef.current === 'team_correct' || resultRef.current === 'opponent_correct') {
-      const t = setTimeout(() => nextTurn(), 2500);
+      const t = setTimeout(() => nextTurn(), 3000);
       return () => clearTimeout(t);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -169,33 +169,32 @@ export default function RevealScreen() {
             {robberyMessage}
           </p>
         )}
-        {isCorrect && !gameWon && (
-          <div style={{ marginTop: 18, textAlign: 'center' }}>
-            <p style={{ fontSize: '0.82rem', color: '#6b7a99', lineHeight: 1.6, marginBottom: 10 }}>
+
+      </div>
+
+      {/* BOTÓN / COUNTDOWN */}
+      <div style={{ marginTop: 'auto', paddingTop: 32 }}>
+        {!gameWon && isCorrect && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+            <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '0.82rem', color: '#6b7a99', textAlign: 'center', lineHeight: 1.6 }}>
               {frozenResult === 'opponent_correct'
                 ? 'El turno siguiente es tuyo — robaste la carta.'
                 : 'El turno siguiente es del otro equipo.'}
             </p>
             <div style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: 8,
+              width: '100%',
               background: '#0f1a2e',
-              border: '1px solid #1e2d45',
+              border: '1.5px solid #1e2d45',
               borderRadius: 9999,
-              padding: '6px 16px',
+              padding: '14px',
+              textAlign: 'center',
             }}>
-              <span style={{ fontSize: '1rem' }}>⏱</span>
-              <span style={{ fontFamily: 'Figtree, sans-serif', fontWeight: 700, fontSize: '0.85rem', color: '#8f9bb3' }}>
-                Nueva ronda en {countdown}...
+              <span style={{ fontFamily: 'Figtree, sans-serif', fontWeight: 800, fontSize: '0.85rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: '#8f9bb3' }}>
+                ⏱ Nueva ronda en {countdown}...
               </span>
             </div>
           </div>
         )}
-      </div>
-
-      {/* BOTÓN — solo en incorrectos o cuando el juego no terminó */}
-      <div style={{ marginTop: 'auto', paddingTop: 32 }}>
         {!gameWon && !isCorrect && (
           <motion.button
             whileTap={{ scale: 0.97 }}
