@@ -170,57 +170,6 @@ export default function RevealScreen() {
         )}
 
       </div>
-      {/* CARD DE LA CANCIÓN */}
-      <div
-        style={{
-          marginTop: 40,
-          background: '#46B5F0',
-          borderRadius: 28,
-          padding: '28px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 180,
-        }}
-      >
-        <p
-          style={{
-            fontSize: '1.15rem',
-            fontWeight: 700,
-            color: 'white',
-            marginBottom: 18,
-            textAlign: 'center',
-          }}
-        >
-          {currentSong.artist}
-        </p>
-
-        <h1
-          style={{
-            fontSize: '5.2rem',
-            fontWeight: 900,
-            lineHeight: 1,
-            color: 'white',
-            marginBottom: 24,
-          }}
-        >
-          {currentSong.year}
-        </h1>
-
-        <p
-          style={{
-            fontSize: '1.2rem',
-            fontWeight: 600,
-            color: 'white',
-            textAlign: 'center',
-          }}
-        >
-          {currentSong.title}
-        </p>
-      </div>
-
-      {/* RESULTADO */}
 
       {/* BOTÓN / COUNTDOWN */}
       <div style={{ marginTop: 'auto', paddingTop: 32 }}>
