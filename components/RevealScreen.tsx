@@ -5,7 +5,7 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '@/lib/store';
 import TeamScores from './TeamScores';
 import AbandonButton from './AbandonButton';
-import TutorialOverlay, { TUTORIAL_STEPS } from './TutorialOverlay';
+import TutorialOverlay from './TutorialOverlay';
 
 export default function RevealScreen() {
   const {
@@ -17,8 +17,6 @@ export default function RevealScreen() {
     currentTeamIndex,
     setPhase,
     isTutorial,
-    tutorialStep,
-    nextTutorialStep,
   } = useGameStore();
 
   if (!currentSong) return null;
@@ -52,15 +50,6 @@ export default function RevealScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Tutorial: auto-advance steps 4-7 from RevealScreen
-  useEffect(() => {
-    if (!isTutorial) return;
-    const config = TUTORIAL_STEPS[tutorialStep];
-    if (!config?.autoAdvance) return;
-    const t = setTimeout(() => nextTutorialStep(), config.autoAdvance);
-    return () => clearTimeout(t);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTutorial, tutorialStep]);
 
   // Live countdown
   useEffect(() => {

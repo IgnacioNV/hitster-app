@@ -63,20 +63,12 @@ export default function TurnActiveScreen() {
     }
   }, [timeLeft, triggerTimeout, isTutorial]);
 
-  // Auto-advance tutorial steps that have autoAdvance
-  useEffect(() => {
-    if (!isTutorial) return;
-    const config = TUTORIAL_STEPS[tutorialStep];
-    if (!config?.autoAdvance) return;
-    const t = setTimeout(() => nextTutorialStep(), config.autoAdvance);
-    return () => clearTimeout(t);
-  }, [isTutorial, tutorialStep, nextTutorialStep]);
+
 
   const handleConfirm = () => {
     if (currentPlacementIndex === null) return;
     if (isTutorial && tutorialStep === 3) {
-      // Step 3: user pressed confirm — advance tutorial then proceed
-      nextTutorialStep(); // → step 4 (reveal)
+      nextTutorialStep(); // advance to step 4 before going to reveal
     }
     confirmTurn();
   };
