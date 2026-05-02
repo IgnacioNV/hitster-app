@@ -77,13 +77,13 @@ export default function TurnActiveScreen() {
 
   // Tutorial highlight styles
   const waveformHighlight = isTutorial && tutorialStep === 1
-    ? { boxShadow: '0 0 0 3px #e8197d, 0 0 30px rgba(232,25,125,0.5)', zIndex: 201, position: 'relative' as const }
+    ? { boxShadow: '0 0 0 3px #e8197d, 0 0 40px rgba(232,25,125,0.6)', zIndex: 260, position: 'relative' as const }
     : {};
-  const timelineHighlight = isTutorial && (tutorialStep === 2 || tutorialStep === 3)
-    ? { boxShadow: '0 0 0 2px #f5c842, 0 0 20px rgba(245,200,66,0.3)', borderRadius: 12, zIndex: 201, position: 'relative' as const }
+  const timelineHighlight = isTutorial && tutorialStep === 2
+    ? { boxShadow: '0 0 0 2px #f5c842, 0 0 24px rgba(245,200,66,0.45)', borderRadius: 12, zIndex: 260, position: 'relative' as const }
     : {};
   const confirmHighlight = isTutorial && tutorialStep === 3
-    ? { boxShadow: '0 0 0 3px #e8197d, 0 0 20px rgba(232,25,125,0.4)', zIndex: 201, position: 'relative' as const, borderRadius: 9999 }
+    ? { boxShadow: '0 0 0 3px #e8197d, 0 0 28px rgba(232,25,125,0.55)', zIndex: 260, position: 'relative' as const, borderRadius: 9999 }
     : {};
 
   return (
