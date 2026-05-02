@@ -7,7 +7,7 @@ import { useGameStore } from '@/lib/store';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { setPhase, matchHistory, phase } = useGameStore();
+  const { setPhase, matchHistory, phase, startTutorialGame } = useGameStore();
   const [selectedMode, setSelectedMode] = useState<'offline' | null>(null);
 
   const gameInProgress = phase !== 'setup' && phase !== 'winner';
@@ -145,6 +145,32 @@ export default function HomeScreen() {
           </p>
         </div>
         <span style={{ color: '#8892a4', fontSize: '1.2rem' }}>›</span>
+      </motion.button>
+
+      {/* CÓMO SE JUEGA */}
+      <motion.button
+        whileTap={{ scale: 0.97 }}
+        onClick={startTutorialGame}
+        style={{
+          background: 'transparent',
+          border: '1.5px solid #3db8f5',
+          borderRadius: 16,
+          padding: '14px 20px',
+          cursor: 'pointer',
+          textAlign: 'center',
+          marginBottom: 32,
+          width: '100%',
+        }}
+      >
+        <span style={{
+          fontFamily: 'Figtree, sans-serif',
+          fontWeight: 700,
+          fontSize: '0.9rem',
+          color: '#3db8f5',
+          letterSpacing: '0.02em',
+        }}>
+          🎓 ¿CÓMO SE JUEGA?
+        </span>
       </motion.button>
 
       {/* MODOS */}

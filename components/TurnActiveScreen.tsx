@@ -8,6 +8,7 @@ import Timeline from './Timeline';
 import Waveform from './Waveform';
 import { useMusicPlayer } from '@/hooks/useMusicPlayer';
 import AbandonButton from './AbandonButton';
+import TutorialOverlay, { TUTORIAL_STEPS } from './TutorialOverlay';
 
 const COLOR_HEX: Record<TeamColor, string> = {
   rosa: '#e8197d',
@@ -27,6 +28,9 @@ export default function TurnActiveScreen() {
     timeLeft,
     decrementTime,
     triggerTimeout,
+    isTutorial,
+    tutorialStep,
+    nextTutorialStep,
   } = useGameStore();
 
   const currentTeam = teams[currentTeamIndex];
@@ -34,44 +38,61 @@ export default function TurnActiveScreen() {
   const opponentTeam = teams[opponentIndex];
   const bg = COLOR_HEX[currentTeam.color];
 
-  // Show timeout banner for 3s before transitioning
   const [showTimeoutBanner, setShowTimeoutBanner] = useState(false);
   const timeoutFiredRef = useRef(false);
 
   const mins = Math.floor(timeLeft / 60).toString().padStart(2, '0');
   const secs = (timeLeft % 60).toString().padStart(2, '0');
 
-  // Audio persists on unmount so it keeps playing into timeout_steal screen
   useMusicPlayer(currentSong?.previewUrl ?? null, { persistOnUnmount: true });
 
-  // Countdown timer
+  // Timer — disabled in tutorial
   useEffect(() => {
-    if (showTimeoutBanner) return; // freeze timer while banner is visible
-    if (timeLeft <= 0) return;
-
+    if (isTutorial) return;
+    if (showTimeoutBanner || timeLeft <= 0) return;
     const interval = setInterval(() => decrementTime(), 1000);
     return () => clearInterval(interval);
-  }, [decrementTime, showTimeoutBanner, timeLeft]);
+  }, [decrementTime, showTimeoutBanner, timeLeft, isTutorial]);
 
-  // When time hits 0, show banner then transition
   useEffect(() => {
+    if (isTutorial) return;
     if (timeLeft <= 0 && !timeoutFiredRef.current) {
       timeoutFiredRef.current = true;
       setShowTimeoutBanner(true);
-
-      setTimeout(() => {
-        triggerTimeout(); // transitions phase → timeout_steal
-      }, 3000);
+      setTimeout(() => triggerTimeout(), 3000);
     }
-  }, [timeLeft, triggerTimeout]);
+  }, [timeLeft, triggerTimeout, isTutorial]);
+
+  // Auto-advance tutorial steps that have autoAdvance
+  useEffect(() => {
+    if (!isTutorial) return;
+    const config = TUTORIAL_STEPS[tutorialStep];
+    if (!config?.autoAdvance) return;
+    const t = setTimeout(() => nextTutorialStep(), config.autoAdvance);
+    return () => clearTimeout(t);
+  }, [isTutorial, tutorialStep, nextTutorialStep]);
 
   const handleConfirm = () => {
     if (currentPlacementIndex === null) return;
-    // Audio will keep playing — next screen picks it up via persistOnUnmount
+    if (isTutorial && tutorialStep === 3) {
+      // Step 3: user pressed confirm — advance tutorial then proceed
+      nextTutorialStep(); // → step 4 (reveal)
+    }
     confirmTurn();
   };
 
   if (!currentSong) return null;
+
+  // Tutorial highlight styles
+  const waveformHighlight = isTutorial && tutorialStep === 1
+    ? { boxShadow: '0 0 0 3px #e8197d, 0 0 30px rgba(232,25,125,0.5)', zIndex: 201, position: 'relative' as const }
+    : {};
+  const timelineHighlight = isTutorial && (tutorialStep === 2 || tutorialStep === 3)
+    ? { boxShadow: '0 0 0 2px #f5c842, 0 0 20px rgba(245,200,66,0.3)', borderRadius: 12, zIndex: 201, position: 'relative' as const }
+    : {};
+  const confirmHighlight = isTutorial && tutorialStep === 3
+    ? { boxShadow: '0 0 0 3px #e8197d, 0 0 20px rgba(232,25,125,0.4)', zIndex: 201, position: 'relative' as const, borderRadius: 9999 }
+    : {};
 
   return (
     <motion.div
@@ -89,7 +110,10 @@ export default function TurnActiveScreen() {
         margin: '0 auto',
       }}
     >
-      {/* TIMEOUT BANNER — full-screen overlay for 3 seconds */}
+      {/* TUTORIAL OVERLAY */}
+      <TutorialOverlay currentPlacementIndex={currentPlacementIndex} />
+
+      {/* TIMEOUT BANNER */}
       <AnimatePresence>
         {showTimeoutBanner && (
           <motion.div
@@ -99,20 +123,13 @@ export default function TurnActiveScreen() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             style={{
-              position: 'absolute',
-              inset: 0,
-              zIndex: 50,
+              position: 'absolute', inset: 0, zIndex: 50,
               background: 'rgba(13, 17, 23, 0.93)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: 32,
-              borderRadius: 0,
-              textAlign: 'center',
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              padding: 32, textAlign: 'center',
             }}
           >
-            {/* Pulsing clock icon */}
             <motion.div
               animate={{ scale: [1, 1.15, 1] }}
               transition={{ duration: 0.8, repeat: Infinity }}
@@ -120,53 +137,27 @@ export default function TurnActiveScreen() {
             >
               ⏱️
             </motion.div>
-
-            <p style={{
-              fontFamily: 'Figtree, sans-serif',
-              fontWeight: 900,
-              fontSize: '1.4rem',
-              color: '#ff4d4d',
-              letterSpacing: '0.04em',
-              textTransform: 'uppercase',
-              lineHeight: 1.2,
-              marginBottom: 16,
-            }}>
+            <p style={{ fontFamily: 'Figtree', fontWeight: 900, fontSize: '1.4rem', color: '#ff4d4d', letterSpacing: '0.04em', textTransform: 'uppercase', lineHeight: 1.2, marginBottom: 16 }}>
               ¡SE TERMINÓ EL TIEMPO!
             </p>
-
-            <div style={{
-              background: `${COLOR_HEX[opponentTeam.color]}20`,
-              border: `2px solid ${COLOR_HEX[opponentTeam.color]}`,
-              borderRadius: 14,
-              padding: '14px 24px',
-            }}>
-              <span style={{
-                fontFamily: 'Figtree, sans-serif',
-                fontWeight: 800,
-                fontSize: '1rem',
-                color: COLOR_HEX[opponentTeam.color],
-              }}>
+            <div style={{ background: `${COLOR_HEX[opponentTeam.color]}20`, border: `2px solid ${COLOR_HEX[opponentTeam.color]}`, borderRadius: 14, padding: '14px 24px' }}>
+              <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1rem', color: COLOR_HEX[opponentTeam.color] }}>
                 ¡{opponentTeam.name} puede robar la carta!
               </span>
             </div>
-
-            <p style={{
-              fontFamily: 'Figtree, sans-serif',
-              fontSize: '0.8rem',
-              color: '#8892a4',
-              marginTop: 20,
-            }}>
+            <p style={{ fontFamily: 'Figtree', fontSize: '0.8rem', color: '#8892a4', marginTop: 20 }}>
               La canción sigue sonando...
             </p>
           </motion.div>
         )}
       </AnimatePresence>
-      {/* ── HEADER ── */}
+
+      {/* HEADER */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <AbandonButton />
         <div style={{ textAlign: 'center' }}>
           <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 4 }}>
-            TURNO
+            {isTutorial ? 'TUTORIAL' : 'TURNO'}
           </p>
           <div style={{ background: bg, borderRadius: 6, padding: '4px 10px' }}>
             <span style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: currentTeam.color === 'amarillo' ? '#111' : 'white' }}>
@@ -178,25 +169,21 @@ export default function TurnActiveScreen() {
           <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.65rem', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8892a4', marginBottom: 4 }}>
             TIEMPO
           </p>
-          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.3rem', color: timeLeft <= 20 ? '#ff4d4d' : 'white' }}>
-            {mins}:{secs}
+          <span style={{ fontFamily: 'Figtree', fontWeight: 800, fontSize: '1.3rem', color: isTutorial ? '#8892a4' : timeLeft <= 20 ? '#ff4d4d' : 'white' }}>
+            {isTutorial ? '—:——' : `${mins}:${secs}`}
           </span>
         </div>
       </div>
 
-
       <TeamScores />
 
-      {/* ── AUDIO VISUAL ── */}
+      {/* AUDIO */}
       <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: 'white', marginBottom: 8 }}>
         Sonando ahora...
       </p>
 
       <motion.div
-        animate={{
-          scale: [1, 1.03, 1],
-          boxShadow: [`0 0 0px ${bg}`, `0 0 30px ${bg}`, `0 0 0px ${bg}`],
-        }}
+        animate={{ scale: [1, 1.03, 1], boxShadow: [`0 0 0px ${bg}`, `0 0 30px ${bg}`, `0 0 0px ${bg}`] }}
         transition={{ duration: 1.5, repeat: Infinity }}
         style={{
           background: '#161b27',
@@ -208,17 +195,18 @@ export default function TurnActiveScreen() {
           justifyContent: 'center',
           marginBottom: 20,
           minHeight: 150,
+          ...waveformHighlight,
         }}
       >
         <Waveform color={bg} />
       </motion.div>
 
-      {/* ── TIMELINE ── */}
+      {/* TIMELINE */}
       <p style={{ fontFamily: 'Figtree', fontWeight: 700, fontSize: '0.85rem', color: 'white', marginBottom: 8 }}>
         Línea de tiempo
       </p>
 
-      <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16 }}>
+      <div style={{ flex: 1, overflowY: 'auto', marginBottom: 16, ...timelineHighlight }}>
         <Timeline
           timeline={currentTeam.timeline}
           color={currentTeam.color}
@@ -228,14 +216,16 @@ export default function TurnActiveScreen() {
         />
       </div>
 
-      <motion.button
-        whileTap={{ scale: 0.97 }}
-        className="btn-primary"
-        onClick={handleConfirm}
-        style={{ opacity: currentPlacementIndex === null ? 0.5 : 1 }}
-      >
-        CONFIRMAR TURNO
-      </motion.button>
+      <div style={confirmHighlight}>
+        <motion.button
+          whileTap={{ scale: 0.97 }}
+          className="btn-primary"
+          onClick={handleConfirm}
+          style={{ opacity: currentPlacementIndex === null ? 0.5 : 1 }}
+        >
+          CONFIRMAR TURNO
+        </motion.button>
+      </div>
     </motion.div>
   );
 }

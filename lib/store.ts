@@ -78,6 +78,8 @@ interface GameState {
 
   matchHistory: MatchHistory[];
   gameConfig: GameConfig;
+  isTutorial: boolean;
+  tutorialStep: number;
 
   setTeams: (teams: [Team, Team]) => void;
   setPhase: (phase: GamePhase) => void;
@@ -101,6 +103,9 @@ interface GameState {
   resetGame: () => void;
   startQuickGame: () => Promise<void>;
   startCustomGame: (config: GameConfig) => Promise<void>;
+  startTutorialGame: () => void;
+  nextTutorialStep: () => void;
+  endTutorial: () => void;
 }
 
 // TEMP: testing winner flow
@@ -166,6 +171,8 @@ export const useGameStore = create<GameState>()(
 
       matchHistory: [],
       gameConfig: { mode: 'offline', difficulty: 'normal', playlist: 'default' },
+      isTutorial: false,
+      tutorialStep: 0,
 
       setTeams: (teams) => set({ teams }),
       setPhase: (phase) => set({ phase }),
@@ -377,6 +384,68 @@ export const useGameStore = create<GameState>()(
         set({ phase: 'setup' });
       },
 
+      startTutorialGame: () => {
+        // Fixed tutorial song — no randomness, no timer
+        const tutorialSong: Song = {
+          id: 'tutorial-1',
+          title: 'Billie Jean',
+          artist: 'Michael Jackson',
+          year: 1983,
+          previewUrl: null,
+        };
+        const tutorialInitialSong: Song = {
+          id: 'tutorial-0',
+          title: 'Bohemian Rhapsody',
+          artist: 'Queen',
+          year: 1975,
+          previewUrl: null,
+        };
+        set({
+          isTutorial: true,
+          tutorialStep: 0,
+          phase: 'turn_active',
+          timerActive: false,
+          timeLeft: 9999, // effectively disabled
+          currentSong: tutorialSong,
+          currentPlacementIndex: null,
+          opponentPlacementIndex: null,
+          timeoutStealIndex: null,
+          revealResult: null,
+          opponentChoseChange: false,
+          robberyMessage: null,
+          teams: [
+            {
+              name: 'Vos',
+              color: 'rosa',
+              timeline: [tutorialInitialSong],
+              robberyTokens: 4,
+              score: 0,
+            },
+            {
+              name: 'Rival',
+              color: 'celeste',
+              timeline: [],
+              robberyTokens: 4,
+              score: 0,
+            },
+          ],
+          allSongs: [],
+          usedSongIds: ['tutorial-0', 'tutorial-1'],
+        });
+      },
+
+      nextTutorialStep: () => {
+        set((s) => ({ tutorialStep: s.tutorialStep + 1 }));
+      },
+
+      endTutorial: () => {
+        set({
+          isTutorial: false,
+          tutorialStep: 0,
+          phase: 'home',
+        });
+      },
+
       _startGameWithDefaults: async () => {
         const { setTeams, setAllSongs, nextTurn } = get();
         const usedIds = new Set<string>();
@@ -419,6 +488,8 @@ export const useGameStore = create<GameState>()(
         opponentChoseChange: false,
         robberyMessage: null,
         gameConfig: { mode: 'offline', difficulty: 'normal', playlist: 'default' },
+        isTutorial: false,
+        tutorialStep: 0,
         // matchHistory intentionally preserved
         matchHistory: state.matchHistory,
       })),
