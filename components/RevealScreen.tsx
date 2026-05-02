@@ -17,34 +17,38 @@ export default function RevealScreen() {
     setPhase,
   } = useGameStore();
 
-  const isDoubleTimeout = robberyMessage?.startsWith('Punto perdido');
-
   if (!currentSong) return null;
 
   const resultRef = useRef(revealResult);
-  const [countdown, setCountdown] = useState(3); // freeze result at mount — never changes mid-reveal
+  const [countdown, setCountdown] = useState(3);
 
-  // Stop audio once on mount
+  const gameWon = teams[0].score >= 10 || teams[1].score >= 10;
+  const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
+  const frozenResult = resultRef.current;
+  const isDoubleTimeout = robberyMessage?.startsWith('Punto perdido');
+
+  // Stop audio on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { stopGlobalAudio(); }, []);
 
-  // Redirect to winner screen if applicable — but only AFTER audio stop has settled
+  // Redirect to winner if a team has won
   useEffect(() => {
-    if (teams[0].score >= 10 || teams[1].score >= 10) {
+    if (gameWon) {
       const t = setTimeout(() => setPhase('winner'), 100);
       return () => clearTimeout(t);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount — scores won't change during reveal
+  }, []);
 
-  // Auto-advance after every result
+  // Auto-advance to next turn after 3s
   useEffect(() => {
+    if (gameWon) return;
     const t = setTimeout(() => nextTurn(), 3000);
     return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once — result is stable from mount
+  }, []);
 
-  // Live countdown display for all results
+  // Live countdown
   useEffect(() => {
     if (gameWon) return;
     const interval = setInterval(() => {
@@ -54,31 +58,21 @@ export default function RevealScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const gameWon = teams[0].score >= 10 || teams[1].score >= 10;
-  const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
-
-  // Use frozen ref so UI never flickers if store updates
-  const frozenResult = resultRef.current;
-
   const getResultConfig = () => {
-    if (frozenResult === 'team_correct') {
-      return {
-        title: '¡CORRECTO!',
-        subtitle: `Punto para ${teams[currentTeamIndex].name}`,
-        border: '1px solid rgba(34, 197, 94, 0.35)',
-        glow: '0 0 0 1px rgba(34,197,94,0.12)',
-        titleColor: '#22c55e',
-      };
-    }
-    if (frozenResult === 'opponent_correct') {
-      return {
-        title: '¡ROBO EXITOSO!',
-        subtitle: `Punto para ${teams[opponentIndex].name}`,
-        border: '1px solid rgba(59, 130, 246, 0.35)',
-        glow: '0 0 0 1px rgba(59,130,246,0.12)',
-        titleColor: '#3b82f6',
-      };
-    }
+    if (frozenResult === 'team_correct') return {
+      title: '¡CORRECTO!',
+      subtitle: `Punto para ${teams[currentTeamIndex].name}`,
+      border: '1px solid rgba(34, 197, 94, 0.35)',
+      glow: '0 0 0 1px rgba(34,197,94,0.12)',
+      titleColor: '#22c55e',
+    };
+    if (frozenResult === 'opponent_correct') return {
+      title: '¡ROBO EXITOSO!',
+      subtitle: `Punto para ${teams[opponentIndex].name}`,
+      border: '1px solid rgba(59, 130, 246, 0.35)',
+      glow: '0 0 0 1px rgba(59,130,246,0.12)',
+      titleColor: '#3b82f6',
+    };
     return {
       title: '¡INCORRECTO!',
       subtitle: 'El punto se pierde',
@@ -89,7 +83,6 @@ export default function RevealScreen() {
   };
 
   const result = getResultConfig();
-  const isCorrect = frozenResult === 'team_correct' || frozenResult === 'opponent_correct';
 
   return (
     <motion.div
@@ -112,67 +105,60 @@ export default function RevealScreen() {
       </div>
       <TeamScores />
 
-      {/* CARD DE LA CANCIÓN */}
-      <div
-        style={{
-          marginTop: 40,
-          background: '#46B5F0',
-          borderRadius: 28,
-          padding: '38px 24px',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: 320,
-        }}
-      >
-        <p style={{ fontSize: '1.15rem', fontWeight: 700, color: 'white', marginBottom: 18, textAlign: 'center' }}>
+      {/* CANCIÓN */}
+      <div style={{
+        marginTop: 40,
+        background: '#46B5F0',
+        borderRadius: 28,
+        padding: '32px 24px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: 240,
+      }}>
+        <p style={{ fontSize: '1.1rem', fontWeight: 700, color: 'white', marginBottom: 14, textAlign: 'center' }}>
           {currentSong.artist}
         </p>
-        <h1 style={{ fontSize: '5.2rem', fontWeight: 900, lineHeight: 1, color: 'white', marginBottom: 24 }}>
+        <h1 style={{ fontSize: '5rem', fontWeight: 900, lineHeight: 1, color: 'white', marginBottom: 20 }}>
           {currentSong.year}
         </h1>
-        <p style={{ fontSize: '1.2rem', fontWeight: 600, color: 'white', textAlign: 'center' }}>
+        <p style={{ fontSize: '1.1rem', fontWeight: 600, color: 'white', textAlign: 'center' }}>
           {currentSong.title}
         </p>
       </div>
 
       {/* RESULTADO */}
-      <div
-        style={{
-          marginTop: 26,
-          background: '#18223d',
-          borderRadius: 24,
-          padding: '34px 22px',
-          border: result.border,
-          boxShadow: result.glow,
-        }}
-      >
-        <h2
-          style={{
-            textAlign: 'center',
-            fontSize: '2.4rem',
-            fontWeight: 900,
-            color: result.titleColor,
-            marginBottom: 14,
-            letterSpacing: '0.02em',
-          }}
-        >
+      <div style={{
+        marginTop: 20,
+        background: '#18223d',
+        borderRadius: 24,
+        padding: '28px 22px',
+        border: result.border,
+        boxShadow: result.glow,
+      }}>
+        <h2 style={{
+          textAlign: 'center',
+          fontSize: '2.2rem',
+          fontWeight: 900,
+          color: result.titleColor,
+          marginBottom: 10,
+          letterSpacing: '0.02em',
+        }}>
           {result.title}
         </h2>
-        <p style={{ textAlign: 'center', fontSize: '1rem', color: '#8f9bb3', fontWeight: 500, lineHeight: 1.6 }}>
+        <p style={{ textAlign: 'center', fontSize: '0.95rem', color: '#8f9bb3', fontWeight: 500, lineHeight: 1.6 }}>
           {result.subtitle}
         </p>
-        {robberyMessage && (
-          <p style={{ marginTop: 14, textAlign: 'center', fontSize: '0.85rem', fontWeight: 500, color: '#7f8aa3', lineHeight: 1.6 }}>
+        {robberyMessage && !isDoubleTimeout && (
+          <p style={{ marginTop: 10, textAlign: 'center', fontSize: '0.82rem', color: '#7f8aa3', lineHeight: 1.6 }}>
             {robberyMessage}
           </p>
         )}
-
       </div>
 
-      {/* BOTÓN / COUNTDOWN */}
-      <div style={{ marginTop: 'auto', paddingTop: 32 }}>
+      {/* COUNTDOWN */}
+      <div style={{ marginTop: 'auto', paddingTop: 28 }}>
         {!gameWon && (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
             <p style={{ fontFamily: 'Figtree, sans-serif', fontSize: '0.82rem', color: '#6b7a99', textAlign: 'center', lineHeight: 1.6 }}>
@@ -180,7 +166,9 @@ export default function RevealScreen() {
                 ? robberyMessage
                 : frozenResult === 'opponent_correct'
                   ? 'El turno siguiente es tuyo — robaste la carta.'
-                  : 'El turno siguiente es del otro equipo.'}
+                  : frozenResult === 'team_correct'
+                    ? 'El turno siguiente es del otro equipo.'
+                    : 'Nadie sumó puntos este turno.'}
             </p>
             <div style={{
               width: '100%',
@@ -196,7 +184,6 @@ export default function RevealScreen() {
             </div>
           </div>
         )}
-
       </div>
     </motion.div>
   );
