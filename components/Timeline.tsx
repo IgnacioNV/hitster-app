@@ -30,33 +30,41 @@ export default function Timeline({
   const bg = COLOR_HEX[color];
   const textColor = color === 'amarillo' ? '#111' : '#fff';
 
+  // Check if inserting at index i would create a same-year adjacency
+  const isSameYearAsNeighbor = (index: number): boolean => {
+    if (!newSong) return false;
+    const prev = index > 0 ? timeline[index - 1] : null;
+    const next = index < timeline.length ? timeline[index] : null;
+    return (prev && prev.year === newSong.year) || (next && next.year === newSong.year);
+  };
+
   const renderSlots = () => {
     const slots = [];
 
-    // cantidad de posiciones posibles:
-    // si hay 1 carta => 2 posiciones
-    // si hay 2 cartas => 3 posiciones
     for (let i = 0; i <= timeline.length; i++) {
       const isSelected = selectedIndex === i;
       const isBlocked = blockedIndex === i;
+      const sameYear = isSameYearAsNeighbor(i);
 
-      // SLOT DE INSERCIÓN
       slots.push(
         <motion.button
           key={`slot-${i}`}
-          whileTap={!isBlocked ? { scale: 0.96 } : undefined}
+          whileTap={!isBlocked && !sameYear ? { scale: 0.96 } : undefined}
           onClick={() => {
-            if (isBlocked) return;
+            if (isBlocked || sameYear) return;
             onSelect(i);
           }}
           style={{
-            minWidth: 80,
+            minWidth: sameYear ? 0 : 80,
+            width: sameYear ? 0 : undefined,
             height: 140,
             borderRadius: 14,
             border: isSelected
               ? `2px solid ${bg}`
               : isBlocked
               ? '2px dashed #666'
+              : sameYear
+              ? 'none'
               : '2px dashed #3a4560',
             background: isSelected
               ? `${bg}15`
@@ -66,21 +74,27 @@ export default function Timeline({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            cursor: isBlocked ? 'not-allowed' : 'pointer',
-            opacity: isBlocked ? 0.45 : 1,
+            cursor: sameYear ? 'not-allowed' : isBlocked ? 'not-allowed' : 'pointer',
+            opacity: sameYear ? 0 : isBlocked ? 0.45 : 1,
             flexShrink: 0,
+            marginLeft: sameYear ? -12 : 0,
+            marginRight: sameYear ? -12 : 0,
+            overflow: 'hidden',
+            transition: 'all 0.2s ease',
           }}
         >
-          <span
-            style={{
-              fontFamily: 'Figtree',
-              fontWeight: 800,
-              fontSize: '1.4rem',
-              color: isSelected ? bg : '#8892a4',
-            }}
-          >
-            +
-          </span>
+          {!sameYear && (
+            <span
+              style={{
+                fontFamily: 'Figtree',
+                fontWeight: 800,
+                fontSize: '1.4rem',
+                color: isSelected ? bg : '#8892a4',
+              }}
+            >
+              +
+            </span>
+          )}
         </motion.button>
       );
 

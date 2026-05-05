@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore, TeamColor } from '@/lib/store';
+import { useTimer } from '@/hooks/useTimer';
 import TeamScores from './TeamScores';
 import Timeline from './Timeline';
 import Waveform from './Waveform';
@@ -45,23 +46,16 @@ export default function TurnActiveScreen() {
   const secs = (timeLeft % 60).toString().padStart(2, '0');
 
   useMusicPlayer(currentSong?.previewUrl ?? null, { persistOnUnmount: true });
+  useTimer();
 
-  // Timer — disabled in tutorial
-  useEffect(() => {
-    if (isTutorial) return;
-    if (showTimeoutBanner || timeLeft <= 0) return;
-    const interval = setInterval(() => decrementTime(), 1000);
-    return () => clearInterval(interval);
-  }, [decrementTime, showTimeoutBanner, timeLeft, isTutorial]);
-
+  // Show timeout banner when time expires
   useEffect(() => {
     if (isTutorial) return;
     if (timeLeft <= 0 && !timeoutFiredRef.current) {
       timeoutFiredRef.current = true;
       setShowTimeoutBanner(true);
-      setTimeout(() => triggerTimeout(), 3000);
     }
-  }, [timeLeft, triggerTimeout, isTutorial]);
+  }, [timeLeft, isTutorial]);
 
   // Auto-advance tutorial steps that have autoAdvance
   useEffect(() => {

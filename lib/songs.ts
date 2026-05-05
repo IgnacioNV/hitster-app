@@ -79,7 +79,7 @@ export const songs: Song[] = [
   { id: '55', title: 'El Oso', artist: 'Moris', year: 1970, previewUrl: null },
   
   { id: '57', title: 'Tren al Sur', artist: 'Los Prisioneros', year: 1990, previewUrl: null },
-  { id: '58', title: 'Persiana Americana', artist: 'Soda Stereo', year: 1986, previewUrl: null },
+  { id: '56', title: 'Persiana Americana', artist: 'Soda Stereo', year: 1986, previewUrl: null },
   { id: '59', title: 'Zoom', artist: 'Soda Stereo', year: 1995, previewUrl: null },
   { id: '60', title: 'Primavera 0', artist: 'Soda Stereo', year: 1995, previewUrl: null },
 

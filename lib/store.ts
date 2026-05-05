@@ -25,7 +25,6 @@ export type GamePhase =
   | 'home'
   | 'setup'
   | 'turn_active'
-  | 'timeout_steal'
   | 'opponent_response'
   | 'opponent_change'
   | 'reveal'
@@ -74,8 +73,6 @@ interface GameState {
   opponentChoseChange: boolean;
   robberyMessage: string | null;
 
-  timeoutStealIndex: number | null;
-
   matchHistory: MatchHistory[];
   gameConfig: GameConfig;
   isTutorial: boolean;
@@ -85,7 +82,6 @@ interface GameState {
   setPhase: (phase: GamePhase) => void;
   setCurrentPlacement: (index: number) => void;
   setOpponentPlacement: (index: number) => void;
-  setTimeoutStealIndex: (index: number) => void;
   setTimeLeft: (time: number) => void;
   setTimerActive: (active: boolean) => void;
   decrementTime: () => void;
@@ -106,12 +102,12 @@ interface GameState {
   startTutorialGame: () => void;
   nextTutorialStep: () => void;
   endTutorial: () => void;
+  canTransition: (from: GamePhase[], to: GamePhase) => boolean;
 }
 
-// TEMP: testing winner flow
 const initialTeams: [Team, Team] = [
-  { name: 'Equipo 1', color: 'rosa',    timeline: [], robberyTokens: 4, score: 8 },
-  { name: 'Equipo 2', color: 'celeste', timeline: [], robberyTokens: 4, score: 8 },
+  { name: 'Equipo 1', color: 'rosa',    timeline: [], robberyTokens: 4, score: 0 },
+  { name: 'Equipo 2', color: 'celeste', timeline: [], robberyTokens: 4, score: 0 },
 ];
 
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
@@ -125,10 +121,10 @@ function isCorrectPlacement(timeline: Song[], song: Song, index: number): boolea
   return true;
 }
 
-function insertSongSorted(timeline: Song[], song: Song, index: number): Song[] {
+function insertSongAt(timeline: Song[], song: Song, index: number): Song[] {
   const updated = [...timeline];
   updated.splice(index, 0, song);
-  return updated.sort((a, b) => a.year - b.year);
+  return updated;
 }
 
 function checkWinner(teams: [Team, Team]): GamePhase | null {
@@ -157,7 +153,6 @@ export const useGameStore = create<GameState>()(
       currentSong: null,
       currentPlacementIndex: null,
       opponentPlacementIndex: null,
-      timeoutStealIndex: null,
 
       timeLeft: 45,
       timerActive: false,
@@ -178,7 +173,6 @@ export const useGameStore = create<GameState>()(
       setPhase: (phase) => set({ phase }),
       setCurrentPlacement: (index) => set({ currentPlacementIndex: index }),
       setOpponentPlacement: (index) => set({ opponentPlacementIndex: index }),
-      setTimeoutStealIndex: (index) => set({ timeoutStealIndex: index }),
       setTimeLeft: (time) => set({ timeLeft: time }),
       setTimerActive: (active) => set({ timerActive: active }),
       decrementTime: () => set((s) => ({ timeLeft: Math.max(0, s.timeLeft - 1) })),
@@ -187,47 +181,44 @@ export const useGameStore = create<GameState>()(
       // ─── TIMEOUT ───────────────────────────────────────────────
       triggerTimeout: () => {
         if (get().phase !== 'turn_active') return;
-        set({
-          phase: 'timeout_steal',
-          timerActive: true,
-          timeLeft: 30,
-          currentPlacementIndex: null,
-          timeoutStealIndex: null,
-        });
-      },
-
-      confirmTimeoutSteal: () => {
-        if (get().phase === 'reveal' || get().phase === 'winner') return; // guard: prevent double execution
-        const { teams, currentTeamIndex, currentSong, timeoutStealIndex, matchHistory } = get();
-        if (!currentSong || timeoutStealIndex === null) return;
+        const { teams, currentTeamIndex, currentSong, matchHistory } = get();
+        if (!currentSong) return;
 
         const opponentIndex = currentTeamIndex === 0 ? 1 : 0;
         const opponentTeam = teams[opponentIndex];
         const updatedTeams = [...teams] as [Team, Team];
 
-        const correct = isCorrectPlacement(opponentTeam.timeline, currentSong, timeoutStealIndex);
+        // Opponent gets automatic correct placement at end of timeline
+        const stealIndex = opponentTeam.timeline.length;
+        const correct = isCorrectPlacement(opponentTeam.timeline, currentSong, stealIndex);
 
         if (correct) {
           updatedTeams[opponentIndex] = {
             ...opponentTeam,
-            timeline: insertSongSorted(opponentTeam.timeline, currentSong, timeoutStealIndex),
+            timeline: insertSongAt(opponentTeam.timeline, currentSong, stealIndex),
             score: opponentTeam.score + 1,
           };
           const newPhase = checkWinner(updatedTeams) ?? 'reveal';
           set({
             teams: updatedTeams,
-            revealResult: 'opponent_correct',
             phase: newPhase,
-            robberyMessage: `¡Tiempo agotado! ${opponentTeam.name} acertó y se lleva el punto.`,
+            currentPlacementIndex: null,
+            timeoutStealIndex: null,
+            revealResult: 'opponent_correct',
+            robberyMessage: `¡Tiempo agotado! ${opponentTeam.name} gana el punto automáticamente.`,
+            timerActive: false,
             ...(newPhase === 'winner' && {
               matchHistory: [...matchHistory, buildHistoryEntry(updatedTeams)],
             }),
           });
         } else {
           set({
-            revealResult: 'both_wrong',
             phase: 'reveal',
+            currentPlacementIndex: null,
+            timeoutStealIndex: null,
+            revealResult: 'both_wrong',
             robberyMessage: `¡Tiempo agotado! ${opponentTeam.name} no acertó. Nadie gana el punto.`,
+            timerActive: false,
           });
         }
       },
@@ -247,7 +238,7 @@ export const useGameStore = create<GameState>()(
         if (correct) {
           updatedTeams[currentTeamIndex] = {
             ...currentTeam,
-            timeline: insertSongSorted(currentTeam.timeline, currentSong, currentPlacementIndex),
+            timeline: insertSongAt(currentTeam.timeline, currentSong, currentPlacementIndex),
             score: currentTeam.score + 1,
           };
           const newPhase = checkWinner(updatedTeams) ?? 'reveal';
@@ -284,7 +275,7 @@ export const useGameStore = create<GameState>()(
         if (!currentCorrect && opponentCorrect) {
           updatedTeams[opponentIndex] = {
             ...opponentTeam,
-            timeline: insertSongSorted(opponentTeam.timeline, currentSong, opponentPlacementIndex),
+            timeline: insertSongAt(opponentTeam.timeline, currentSong, opponentPlacementIndex),
             score: opponentTeam.score + 1,
             robberyTokens: Math.max(0, opponentTeam.robberyTokens - 1),
           };
@@ -304,7 +295,7 @@ export const useGameStore = create<GameState>()(
         if (currentCorrect) {
           updatedTeams[currentTeamIndex] = {
             ...currentTeam,
-            timeline: insertSongSorted(currentTeam.timeline, currentSong, currentPlacementIndex),
+            timeline: insertSongAt(currentTeam.timeline, currentSong, currentPlacementIndex),
             score: currentTeam.score + 1,
           };
           updatedTeams[opponentIndex] = {
@@ -368,7 +359,6 @@ export const useGameStore = create<GameState>()(
           currentSong: finalSong,
           currentPlacementIndex: null,
           opponentPlacementIndex: null,
-          timeoutStealIndex: null,
           phase: 'turn_active',
           timeLeft: 45,
           timerActive: true,
@@ -409,7 +399,6 @@ export const useGameStore = create<GameState>()(
           currentSong: tutorialSong,
           currentPlacementIndex: null,
           opponentPlacementIndex: null,
-          timeoutStealIndex: null,
           revealResult: null,
           opponentChoseChange: false,
           robberyMessage: null,
@@ -471,6 +460,14 @@ export const useGameStore = create<GameState>()(
         await get().startQuickGame();
       },
 
+      // ─── PHASE GUARD ────────────────────────────────────────
+      canTransition: (from: GamePhase[], to: GamePhase) => {
+        const phase = get().phase;
+        if (phase === 'winner') return false; // winner is terminal
+        if (from.includes(phase)) return true;
+        return false;
+      },
+
       // resetGame preserves matchHistory
       resetGame: () => set((state) => ({
         teams: initialTeams,
@@ -479,7 +476,6 @@ export const useGameStore = create<GameState>()(
         currentSong: null,
         currentPlacementIndex: null,
         opponentPlacementIndex: null,
-        timeoutStealIndex: null,
         timeLeft: 45,
         timerActive: false,
         allSongs: [],
@@ -505,15 +501,15 @@ export const useGameStore = create<GameState>()(
         currentSong:           state.currentSong,
         currentPlacementIndex: state.currentPlacementIndex,
         opponentPlacementIndex:state.opponentPlacementIndex,
-        timeoutStealIndex:     state.timeoutStealIndex,
         timeLeft:              state.timeLeft,
-        timerActive:           state.timerActive,
+        // timerActive excluded — resets on reload
         allSongs:              state.allSongs,
         usedSongIds:           state.usedSongIds,
         revealResult:          state.revealResult,
         opponentChoseChange:   state.opponentChoseChange,
         robberyMessage:        state.robberyMessage,
         matchHistory:          state.matchHistory,
+        gameConfig:            state.gameConfig,
       }),
     }
   )

@@ -209,27 +209,33 @@ export default function OpponentResponseScreen() {
         }}
       >
         <motion.button
-        whileTap={{ scale: 0.97 }}
-        onClick={opponentChange}
+        whileTap={{ scale: opponentTeam.robberyTokens > 0 ? 0.97 : undefined }}
+        onClick={() => {
+          if (opponentTeam.robberyTokens > 0) opponentChange();
+        }}
+        disabled={opponentTeam.robberyTokens === 0}
         style={{
           width: '100%',
           padding: '16px 20px',
           borderRadius: 16,
-          border: '1.5px solid rgba(255,255,255,0.85)',
-          background: 'transparent',
-          color: 'white',
+          border: opponentTeam.robberyTokens > 0
+            ? '1.5px solid rgba(255,255,255,0.85)'
+            : '1.5px solid rgba(255,255,255,0.25)',
+          background: opponentTeam.robberyTokens > 0 ? 'transparent' : 'rgba(255,255,255,0.05)',
+          color: opponentTeam.robberyTokens > 0 ? 'white' : 'rgba(255,255,255,0.4)',
           fontFamily: 'Figtree',
           fontSize: '0.95rem',
           fontWeight: 800,
           letterSpacing: '0.04em',
           textTransform: 'uppercase',
-          cursor: 'pointer',
+          cursor: opponentTeam.robberyTokens > 0 ? 'pointer' : 'not-allowed',
           outline: 'none',
           marginTop: 12,
           transition: 'all 0.2s ease',
+          opacity: opponentTeam.robberyTokens > 0 ? 1 : 0.5,
         }}
         >
-  REALIZAR CAMBIOS
+  {opponentTeam.robberyTokens > 0 ? 'REALIZAR CAMBIOS' : 'SIN FICHAS PARA CAMBIOS'}
 </motion.button>
 
         <motion.button
